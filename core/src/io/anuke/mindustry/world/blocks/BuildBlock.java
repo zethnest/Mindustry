@@ -20,9 +20,11 @@ import io.anuke.mindustry.graphics.*;
 import io.anuke.mindustry.type.*;
 import io.anuke.mindustry.ui.*;
 import io.anuke.mindustry.world.*;
+import io.anuke.mindustry.world.blocks.power.NuclearReactor;
 import io.anuke.mindustry.world.modules.*;
 
 import java.io.*;
+import java.time.Instant;
 
 import static io.anuke.mindustry.Vars.*;
 
@@ -222,6 +224,8 @@ public class BuildBlock extends Block{
         private float[] accumulator;
         private float[] totalAccumulator;
 
+        private Instant nextWarningTime = Instant.now();
+
         public boolean construct(Unit builder, @Nullable TileEntity core, float amount, boolean configured){
             if(cblock == null){
                 kill();
@@ -242,6 +246,23 @@ public class BuildBlock extends Block{
 
             if(builder instanceof Player){
                 builderID = builder.getID();
+
+                // griefing warnings
+                if(cblock instanceof NuclearReactor && core != null){
+                    Tile coreTile = core.tile;
+                    float distance = Mathf.dst(coreTile.x, coreTile.y, tile.x, tile.y);
+                    if(distance < 50 && Instant.now().isAfter(nextWarningTime)){
+                        // wait 1 second between warnings
+                        nextWarningTime = Instant.now().plusSeconds(1);
+                        Player culprit = (Player)builder;
+                        // replaced a few color names with shorter ones to save space
+                        // base message length: 102 characters
+                        String message =  "[scarlet]WARNING![] " + culprit.name + "[white] ([stat]#" +
+                            culprit.id + "[]) is building a nuke [stat]" + Math.round(distance) +
+                            "[] blocks from the core. [stat]" + Math.round(progress * 100) + "%";
+                        Call.sendChatMessage(message);
+                    }
+                }
             }
 
             if(progress >= 1f || state.rules.infiniteResources){
