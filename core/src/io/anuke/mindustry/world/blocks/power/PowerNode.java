@@ -295,11 +295,11 @@ public class PowerNode extends PowerBlock{
         return false;
     }
 
-    protected boolean overlaps(float srcx, float srcy, Tile other, float range){
+    public boolean overlaps(float srcx, float srcy, Tile other, float range){
         return Intersector.overlaps(Tmp.cr1.set(srcx, srcy, range), other.getHitbox(Tmp.r1));
     }
 
-    protected boolean overlaps(Tile src, Tile other, float range){
+    public boolean overlaps(Tile src, Tile other, float range){
         return overlaps(src.drawx(), src.drawy(), other, range);
     }
 

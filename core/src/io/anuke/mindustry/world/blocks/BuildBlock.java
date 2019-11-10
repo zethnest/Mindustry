@@ -20,11 +20,9 @@ import io.anuke.mindustry.graphics.*;
 import io.anuke.mindustry.type.*;
 import io.anuke.mindustry.ui.*;
 import io.anuke.mindustry.world.*;
-import io.anuke.mindustry.world.blocks.power.NuclearReactor;
 import io.anuke.mindustry.world.modules.*;
 
 import java.io.*;
-import java.time.Instant;
 
 import static io.anuke.mindustry.Vars.*;
 
@@ -61,6 +59,8 @@ public class BuildBlock extends Block{
         world.removeBlock(tile);
         Events.fire(new BlockBuildEndEvent(tile, playerGroup.getByID(builderID), team, true));
         if(shouldPlay()) Sounds.breaks.at(tile, calcPitch(false));
+
+        griefWarnings.handleBlockDeconstructFinish(tile, block, builderID);
     }
 
     @Remote(called = Loc.server)
@@ -78,6 +78,8 @@ public class BuildBlock extends Block{
             }
         }
         Effects.effect(Fx.placeBlock, tile.drawx(), tile.drawy(), block.size);
+
+        griefWarnings.handleBlockConstructFinish(tile, block, builderID);
     }
 
     static boolean shouldPlay(){
@@ -244,7 +246,7 @@ public class BuildBlock extends Block{
 
             if(builder instanceof Player){
                 builderID = builder.getID();
-                griefWarnings.handleBlockConstruction((Player)builder, tile, cblock, progress);
+                griefWarnings.handleBlockConstructProgress((Player)builder, tile, cblock, progress, previous);
             }
 
             if(progress >= 1f || state.rules.infiniteResources){
@@ -286,6 +288,7 @@ public class BuildBlock extends Block{
             }
 
             progress = Mathf.clamp(progress - amount);
+            if (builder instanceof Player) griefWarnings.handleBlockDeconstructProgress((Player)builder, tile, cblock, progress, previous);
 
             if(progress <= 0 || state.rules.infiniteResources){
                 Call.onDeconstructFinish(tile, this.cblock == null ? previous : this.cblock, builderID);
