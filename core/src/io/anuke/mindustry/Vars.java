@@ -182,6 +182,8 @@ public class Vars implements Loadable{
 
     public static Player player;
 
+    public static GriefWarnings griefWarnings;
+
     @Override
     public void loadAsync(){
         loadSettings();
@@ -261,6 +263,8 @@ public class Vars implements Loadable{
         tmpDirectory = dataDirectory.child("tmp/");
         modDirectory = dataDirectory.child("mods/");
         schematicDirectory = dataDirectory.child("schematics/");
+
+        griefWarnings = new GriefWarnings();
 
         modDirectory.mkdirs();
 
