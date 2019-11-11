@@ -1,6 +1,11 @@
 package io.anuke.mindustry.game.griefprevention;
 
+import io.anuke.arc.Core;
 import io.anuke.arc.func.Cons;
+import io.anuke.arc.math.geom.Vector2;
+import io.anuke.mindustry.entities.type.Player;
+import io.anuke.mindustry.game.griefprevention.GriefWarnings.TileInfo;
+import io.anuke.mindustry.world.Tile;
 
 import static io.anuke.mindustry.Vars.*;
 
@@ -25,6 +30,7 @@ public class CommandHandler {
         addCommand("verbose", this::verbose);
         addCommand("debug", this::debug);
         addCommand("spam", this::spam);
+        addCommand("tileinfo", this::tileInfo);
     }
 
     public void addCommand(String name, Cons<Context> handler) {
@@ -45,6 +51,12 @@ public class CommandHandler {
         return true;
     }
 
+    /**
+     * Reconnect every power node to everything it can connect to, intended to
+     * be used after power griefing incidents.
+     * If "redundant" is present as an argument, connect the block even if it is
+     * already part of the same power graph.
+     */
     public void fixPower(Context ctx) {
         boolean redundant = ctx.args.contains("redundant");
         griefWarnings.fixer.fixPower(redundant);
@@ -114,5 +126,31 @@ public class CommandHandler {
                 reply("[scarlet]Not enough arguments");
                 reply("Usage: spam <on|off>");
         }
+    }
+
+    /**
+     * Get stored information for the tile under the cursor
+     */
+    public void tileInfo(Context ctx) {
+        Vector2 vec = Core.input.mouseWorld(Core.input.mouseX(), Core.input.mouseY());
+        Tile tile = world.tile(world.toTile(vec.x), world.toTile(vec.y));
+        TileInfo info = griefWarnings.tileInfo.get(tile);
+        reply("====================");
+        reply("Tile at " + griefWarnings.formatTile(tile));
+        if (info == null) {
+            reply("[yellow]No information");
+            return;
+        }
+        reply("Constructed by: " + griefWarnings.formatPlayer(info.constructedBy));
+        reply("Deconstructed by: " + griefWarnings.formatPlayer(info.deconstructedBy));
+        if (info.previousBlock != null) reply("Block that was here: " + info.previousBlock.name);
+        reply("Configured [accent]" + info.configureCount + "[] times");
+        if (info.interactedPlayers.size > 0) {
+            reply("Players who have interacted with this block:");
+            for (Player player : info.interactedPlayers.iterator()) {
+                reply("  - " + griefWarnings.formatPlayer(player));
+            }
+        } else reply("No interaction information recorded");
+        if (info.lastRotatedBy != null) reply("Last rotated by: " + griefWarnings.formatPlayer(info.lastRotatedBy));
     }
 }

@@ -35,7 +35,7 @@ public class Vars implements Loadable{
     /** Maximum number of broken blocks. TODO implement or remove.*/
     public static final int maxBrokenBlocks = 256;
     /** Maximum schematic size.*/
-    public static final int maxSchematicSize = 32;
+    public static final int maxSchematicSize = 128;
     /** All schematic base64 starts with this string.*/
     public static final String schematicBaseStart ="bXNjaAB";
     /** IO buffer size. */

@@ -38,11 +38,14 @@ public class GriefWarnings {
     }
 
     public class TileInfo {
-        public WeakReference<Player> constructedBy;
+        public Player constructedBy;
+        public Player deconstructedBy;
         public boolean constructSeen = false;
         public boolean deconstructSeen = false;
+        public Block previousBlock;
         public int configureCount = 0;
         public ObjectSet<Player> interactedPlayers = new ObjectSet<>();
+        public Player lastRotatedBy;
     }
 
     private Instant nextWarningTime = Instant.now();
@@ -104,7 +107,7 @@ public class GriefWarnings {
     }
 
     public void handleTileChange(TileChangeEvent event) {
-        tileInfo.remove(event.tile);
+        // if (event.tile.block() == Blocks.air) tileInfo.remove(event.tile);
     }
 
     public TileInfo getOrCreateTileInfo(Tile tile) {
@@ -127,6 +130,7 @@ public class GriefWarnings {
 
     public void handleBlockConstructProgress(Player builder, Tile tile, Block cblock, float progress, Block previous) {
         TileInfo info = getOrCreateTileInfo(tile);
+        if (builder != null) info.constructedBy = builder;
 
         boolean didWarn = false;
         float coreDistance = getDistanceToCore(builder, tile);
@@ -172,7 +176,7 @@ public class GriefWarnings {
     public void handleBlockConstructFinish(Tile tile, Block block, int builderId) {
         TileInfo info = getOrCreateTileInfo(tile);
         Player targetPlayer = playerGroup.getByID(builderId);
-        info.constructedBy = new WeakReference<Player>(targetPlayer);
+        info.constructedBy = targetPlayer;
 
         if (debug && targetPlayer != null) {
             sendMessage("[cyan]Debug[] " + targetPlayer.name + "[white] ([stat]#" + builderId +
@@ -182,6 +186,7 @@ public class GriefWarnings {
 
     public void handleBlockDeconstructProgress(Player builder, Tile tile, Block cblock, float progress, Block previous) {
         TileInfo info = getOrCreateTileInfo(tile);
+        if (builder != null) info.deconstructedBy = builder;
 
         if (!info.deconstructSeen) {
             info.deconstructSeen = true;
@@ -189,7 +194,11 @@ public class GriefWarnings {
     }
 
     public void handleBlockDeconstructFinish(Tile tile, Block block, int builderId) {
+        TileInfo info = getOrCreateTileInfo(tile);
         Player targetPlayer = playerGroup.getByID(builderId);
+        if (targetPlayer != null) info.deconstructedBy = targetPlayer;
+        info.previousBlock = block;
+
         if (debug && targetPlayer != null) {
             sendMessage("[cyan]Debug[] " + targetPlayer.name + "[white] ([stat]#" + builderId +
                 "[]) deconstructs [accent]" + tile.block().name + "[] at " + formatTile(tile), false);
@@ -320,6 +329,19 @@ public class GriefWarnings {
                 sendMessage("[green]Verbose[] " + formatPlayer(targetPlayer) + " configures mass driver at " +
                     formatTile(tile) + " from " + formatTile(oldLink) + " to " + formatTile(newLink));
             }
+        }
+    }
+    
+    public void handleRotateBlock(Player targetPlayer, Tile tile, boolean direction) {
+        TileInfo info = getOrCreateTileInfo(tile);
+        if (targetPlayer != null) {
+            info.lastRotatedBy = targetPlayer;
+            info.interactedPlayers.add(targetPlayer);
+        }
+
+        if (verbose) {
+            sendMessage("[green]Verbose[] " + formatPlayer(targetPlayer) + " rotates " +
+                tile.block().name + " at " + formatTile(tile));
         }
     }
 }

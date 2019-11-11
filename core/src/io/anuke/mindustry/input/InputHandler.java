@@ -88,6 +88,8 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
             tile.entity.updateProximity();
             tile.entity.noSleep();
         }
+
+        griefWarnings.handleRotateBlock(player, tile, direction);
     }
 
     @Remote(targets = Loc.both, forward = true, called = Loc.server)
