@@ -39,7 +39,7 @@ public class FixGrief {
     }
 
     // copied from PowerNode.java
-    public void getPotentialPowerLinks(Tile tile, Cons<Tile> others) {
+    public void getPotentialPowerLinks(Tile tile, boolean redundant, Cons<Tile> others) {
         PowerNode block = (PowerNode)tile.block();
         float laserRange;
         try {
@@ -69,18 +69,17 @@ public class FixGrief {
             return Float.compare(a.dst2(tile), b.dst2(tile));
         });
         tempTiles.each(valid, t -> {
-            // commented out to allow redundant connections
-            // graphs.add(t.entity.power.graph);
+            if (!redundant) graphs.add(t.entity.power.graph);
             others.get(t);
         });
     }
 
     // will massively attempt to reconnect every power node to every block in range that accepts power,
     // including other power nodes
-    public void fixPower() {
+    public void fixPower(boolean redundant) {
         iterateAllTiles(tile -> {
             if (!(tile.block() instanceof PowerNode)) return;
-            getPotentialPowerLinks(tile, link -> {
+            getPotentialPowerLinks(tile, redundant, link -> {
                 int value = link.pos();
                 boolean contains = tile.entity.power.links.contains(value);
                 if (!contains) tile.configure(value);

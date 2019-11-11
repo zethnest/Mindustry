@@ -301,7 +301,7 @@ public class MassDriver extends Block{
     }
 
     public class MassDriverEntity extends TileEntity{
-        int link = -1;
+        public int link = -1;
         float rotation = 90;
         float reload = 0f;
         DriverState state = DriverState.idle;

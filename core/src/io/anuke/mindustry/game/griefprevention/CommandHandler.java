@@ -4,14 +4,16 @@ import io.anuke.arc.func.Cons;
 
 import static io.anuke.mindustry.Vars.*;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 // introducing the worst command system known to mankind
 public class CommandHandler {
     public class Context {
-        public String[] args;
+        public List<String> args;
 
-        public Context(String[] args) {
+        public Context(List<String> args) {
             this.args = args;
         }
     }
@@ -37,22 +39,23 @@ public class CommandHandler {
         args[0] = args[0].substring(1);
         Cons<Context> command = commands.get(args[0].toLowerCase());
         if (command == null) return false;
-        command.get(new Context(args));
+        command.get(new Context(Arrays.asList(args)));
         return true;
     }
 
     public void fixPower(Context ctx) {
-        griefWarnings.fixer.fixPower();
+        boolean redundant = ctx.args.contains("redundant");
+        griefWarnings.fixer.fixPower(redundant);
         reply("[green]Done");
     }
 
     public void verbose(Context ctx) {
-        if (ctx.args.length < 2) {
+        if (ctx.args.size() < 2) {
             reply("[scarlet]Not enough arguments");
             reply("Usage: verbose <on|off>");
             return;
         }
-        switch (ctx.args[1].toLowerCase()) {
+        switch (ctx.args.get(1).toLowerCase()) {
             case "on":
             case "true":
             case "enable":

@@ -144,7 +144,7 @@ public class Sorter extends Block{
 
 
     public class SorterEntity extends TileEntity{
-        @Nullable Item sortItem;
+        @Nullable public Item sortItem;
 
         @Override
         public int config(){

@@ -266,7 +266,8 @@ public class NetClient implements ApplicationListener{
         netClient.removed.clear();
         logic.reset();
 
-        ui.chatfrag.clearMessages();
+        // don't delete warnings from chat if new map loads
+        // ui.chatfrag.clearMessages();
         net.setClientLoaded(false);
 
         ui.loadfrag.show("$connecting.data");
@@ -277,6 +278,7 @@ public class NetClient implements ApplicationListener{
             netClient.quiet = true;
             net.disconnect();
         });
+        griefWarnings.handleWorldDataBegin();
     }
 
     @Remote(variants = Variant.one)
@@ -287,6 +289,7 @@ public class NetClient implements ApplicationListener{
 
     @Remote
     public static void onPlayerDisconnect(int playerid){
+        griefWarnings.handlePlayerDisconnect(playerid);
         playerGroup.removeByID(playerid);
     }
 
@@ -335,6 +338,7 @@ public class NetClient implements ApplicationListener{
                 if(add){
                     entity.add();
                     netClient.addRemovedEntity(entity.getID());
+                    if (entity instanceof Player) griefWarnings.handlePlayerEntitySnapshot((Player)entity);
                 }
             }
         }catch(IOException e){
@@ -411,6 +415,7 @@ public class NetClient implements ApplicationListener{
         Core.app.post(Call::connectConfirm);
         Time.runTask(40f, platform::updateRPC);
         Core.app.post(() -> ui.loadfrag.hide());
+        griefWarnings.handleConnectFinish();
     }
 
     private void reset(){

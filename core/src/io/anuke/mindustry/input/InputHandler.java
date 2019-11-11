@@ -151,6 +151,9 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
     @Remote(targets = Loc.both, called = Loc.both, forward = true)
     public static void onTileConfig(Player player, Tile tile, int value){
         if(tile == null || !Units.canInteract(player, tile)) return;
+
+        griefWarnings.handleBlockBeforeConfigure(tile, player, value);
+
         tile.block().configured(tile, player, value);
         Core.app.post(() -> Events.fire(new TapConfigEvent(tile, player, value)));
     }

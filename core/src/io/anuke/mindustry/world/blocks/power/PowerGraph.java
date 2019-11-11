@@ -14,10 +14,10 @@ public class PowerGraph{
     private final static Array<Tile> outArray2 = new Array<>();
     private final static IntSet closedSet = new IntSet();
 
-    private final ObjectSet<Tile> producers = new ObjectSet<>();
-    private final ObjectSet<Tile> consumers = new ObjectSet<>();
-    private final ObjectSet<Tile> batteries = new ObjectSet<>();
-    private final ObjectSet<Tile> all = new ObjectSet<>();
+    public final ObjectSet<Tile> producers = new ObjectSet<>();
+    public final ObjectSet<Tile> consumers = new ObjectSet<>();
+    public final ObjectSet<Tile> batteries = new ObjectSet<>();
+    public final ObjectSet<Tile> all = new ObjectSet<>();
 
     private final WindowedMean powerBalance = new WindowedMean(60);
     private float lastPowerProduced, lastPowerNeeded;

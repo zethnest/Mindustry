@@ -43,6 +43,7 @@ public class PowerNode extends PowerBlock{
 
         if(contains){
             //unlink
+            PowerGraph oldGraph = entity.power.graph;
             entity.power.links.removeValue(value);
             if(valid) other.entity.power.links.removeValue(tile.pos());
 
@@ -56,6 +57,8 @@ public class PowerNode extends PowerBlock{
                 PowerGraph og = new PowerGraph();
                 //reflow from other end
                 og.reflow(other);
+
+                griefWarnings.handlePowerGraphSplit(player, tile, oldGraph, newgraph, og);
             }
         }else if(linkValid(tile, other) && valid && entity.power.links.size < maxNodes){
 

@@ -2,6 +2,8 @@ package io.anuke.mindustry.game.griefprevention;
 
 import io.anuke.arc.Events;
 import io.anuke.arc.collection.Array;
+import io.anuke.arc.collection.ObjectSet;
+import io.anuke.arc.graphics.Color;
 import io.anuke.arc.math.Mathf;
 import io.anuke.mindustry.content.Items;
 import io.anuke.mindustry.entities.type.Player;
@@ -12,8 +14,11 @@ import io.anuke.mindustry.gen.Call;
 import io.anuke.mindustry.type.Item;
 import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.Tile;
+import io.anuke.mindustry.world.blocks.distribution.MassDriver;
+import io.anuke.mindustry.world.blocks.distribution.Sorter;
 import io.anuke.mindustry.world.blocks.power.ItemLiquidGenerator;
 import io.anuke.mindustry.world.blocks.power.NuclearReactor;
+import io.anuke.mindustry.world.blocks.power.PowerGraph;
 
 import static io.anuke.mindustry.Vars.*;
 
@@ -33,12 +38,18 @@ public class GriefWarnings {
 
     public class TileInfo {
         public WeakReference<Player> constructedBy;
+        public boolean constructSeen = false;
+        public boolean deconstructSeen = false;
+        public int configureCount = 0;
+        public ObjectSet<Player> interactedPlayers = new ObjectSet<>();
     }
 
     private Instant nextWarningTime = Instant.now();
     public WeakHashMap<Player, PlayerStats> playerStats = new WeakHashMap<>();
     // whether or not to be very noisy about everything
     public boolean verbose = false;
+    // whether or not to flat out state the obvious, pissing everyone off
+    public boolean debug = false;
     public WeakHashMap<Tile, TileInfo> tileInfo = new WeakHashMap<>();
 
     public CommandHandler commandHandler = new CommandHandler();
@@ -46,8 +57,6 @@ public class GriefWarnings {
 
     public GriefWarnings() {
         Events.on(DepositEvent.class, this::handleDeposit);
-        // Events.on(PlayerJoin.class, this::handlePlayerJoin);
-        // Events.on(StateChangeEvent.class, this::handleStateChange);
         Events.on(TileChangeEvent.class, this::handleTileChange);
     }
 
@@ -84,50 +93,92 @@ public class GriefWarnings {
         return getDistanceToCore(unit, unit.x, unit.y);
     }
 
+    public void handleConnectFinish() {
+        // TODO: future
+    }
+
+    public void handleDisconnect() {
+        tileInfo.clear();
+        playerStats.clear();
+    }
+
     public void handleTileChange(TileChangeEvent event) {
         tileInfo.remove(event.tile);
     }
 
+    public TileInfo getOrCreateTileInfo(Tile tile) {
+        TileInfo info = tileInfo.get(tile);
+        if (info == null) {
+            info = new TileInfo();
+            tileInfo.put(tile, info);
+        }
+        return info;
+    }
+
+    public PlayerStats getOrCreatePlayerStats(Player player) {
+        PlayerStats stats = playerStats.get(player);
+        if (stats == null) {
+            stats = new PlayerStats(player);
+            playerStats.put(player, stats);
+        }
+        return stats;
+    }
+
     public void handleBlockConstructProgress(Player builder, Tile tile, Block cblock, float progress, Block previous) {
+        TileInfo info = getOrCreateTileInfo(tile);
+
+        boolean didWarn = false;
         float coreDistance = getDistanceToCore(builder, tile);
-        // i don't see any better way to do this
-        // using instanceof to match an entire class of blocks
+        // persistent warnings that keep showing
         if (coreDistance < 50 && cblock instanceof NuclearReactor) {
             String message = "[scarlet]WARNING[] " + builder.name + "[white] ([stat]#" + builder.id
                     + "[]) is building a reactor [stat]" + Math.round(coreDistance) + "[] blocks from core. [stat]"
                     + Math.round(progress * 100) + "%";
             sendMessage(message);
-            return;
+            didWarn = true;
         } else if (coreDistance < 10 && cblock instanceof ItemLiquidGenerator) {
             String message = "[scarlet]WARNING[] " + builder.name + "[white] ([stat]#" + builder.id
                     + "[]) is building a generator [stat]" + Math.round(coreDistance) + "[] blocks from core. [stat]"
                     + Math.round(progress * 100) + "%";
             sendMessage(message);
-            return;
+            didWarn = true;
+        }
+
+        // one-time block construction warnings
+        if (!info.constructSeen) {
+            info.constructSeen = true;
+            if (cblock instanceof NuclearReactor && !didWarn) {
+                String message = "[lightgray]Notice[] " + builder.name + "[white] ([stat]#" + builder.id + "[]) " +
+                    "is building a reactor at " + formatTile(tile);
+                sendMessage(message, false);
+            }
         }
     }
 
     public void handleBlockConstructFinish(Tile tile, Block block, int builderId) {
-        TileInfo info = new TileInfo();
+        TileInfo info = getOrCreateTileInfo(tile);
         Player targetPlayer = playerGroup.getByID(builderId);
         info.constructedBy = new WeakReference<Player>(targetPlayer);
-        tileInfo.put(tile, info);
 
-        if (verbose && targetPlayer != null) {
-            sendMessage("[green]Verbose[] " + targetPlayer.name + "[white] ([stat]#" + builderId +
-                "[]) builds [accent]" + tile.block().name + "[] at (" + tile.x + ", " + tile.y + ")", false);
+        if (debug && targetPlayer != null) {
+            sendMessage("[cyan]Debug[] " + targetPlayer.name + "[white] ([stat]#" + builderId +
+                "[]) builds [accent]" + tile.block().name + "[] at " + formatTile(tile), false);
         }
     }
 
     public void handleBlockDeconstructProgress(Player builder, Tile tile, Block cblock, float progress, Block previous) {
-        // TODO: things will be here in the future
+        TileInfo info = getOrCreateTileInfo(tile);
+
+        if (!info.deconstructSeen) {
+            info.deconstructSeen = true;
+        }
     }
 
     public void handleBlockDeconstructFinish(Tile tile, Block block, int builderId) {
         Player targetPlayer = playerGroup.getByID(builderId);
-        if (verbose && targetPlayer != null) {
-            sendMessage("[green]Verbose[] " + targetPlayer.name + "[white] ([stat]#" + builderId +
-                "[]) deconstructs [accent]" + tile.block().name + "[] at (" + tile.x + ", " + tile.y + ")", false);
+        if (debug && targetPlayer != null) {
+            sendMessage("[cyan]Debug[] " + targetPlayer.name + "[white] ([stat]#" + builderId +
+                "[]) deconstructs [accent]" + tile.block().name + "[] at " + formatTile(tile), false);
         }
     }
 
@@ -159,36 +210,102 @@ public class GriefWarnings {
         if (targetPlayer == null) return;
         if (verbose) {
             sendMessage("[green]Verbose[] " + targetPlayer.name + "[white] ([stat]#" + targetPlayer.id +
-                "[]) transfers " + amount + " " + item.name + " to " + tile.block().name + " (" + tile.x + ", " + tile.y + ")", false);
+                "[]) transfers " + amount + " " + item.name + " to " + tile.block().name + " " + formatTile(tile), false);
         }
         if (item.equals(Items.thorium) && tile.block() instanceof NuclearReactor) {
             String message = "[scarlet]WARNING[] " + targetPlayer.name + "[white] ([stat]#" +
-                targetPlayer.id + "[]) transfers [accent]" + amount + "[] thorium to reactor. (" + tile.x + ", " + tile.y + ")";
+                targetPlayer.id + "[]) transfers [accent]" + amount + "[] thorium to reactor. " + formatTile(tile);
             sendMessage(message);
             return;
         } else if (item.explosiveness > 0.5f && tile.block() instanceof ItemLiquidGenerator) {
             String message = "[scarlet]WARNING[] " + targetPlayer.name + "[white] ([stat]#" +
-                targetPlayer.id + "[]) transfers [accent]" + amount + "[] blast to generator. (" + tile.x + ", " + tile.y + ")";
+                targetPlayer.id + "[]) transfers [accent]" + amount + "[] blast to generator. " + formatTile(tile);
             sendMessage(message);
             return;
         }
     }
 
-    /* this does not work
-    public void createStatsForPlayer(Player player) {
-        System.out.println("creating stats for " + player);
-        playerStats.put(player, new PlayerStats(player));
-    }
-
-    public void handleStateChange(StateChangeEvent event) {
-        if (event.from == State.menu && event.to == State.playing) {
-            playerStats = new WeakHashMap<>();
-            for (Player player : playerGroup.all()) createStatsForPlayer(player);
+    public void handlePlayerEntitySnapshot(Player targetPlayer) {
+        // System.out.println("received entity snapshot for " + targetPlayer.name + "#" + targetPlayer.id);
+        // System.out.println("entity previous: " + playerStats.get(targetPlayer));
+        PlayerStats stats = getOrCreatePlayerStats(targetPlayer);
+        if (debug) {
+            sendMessage("[cyan]Debug[] Player snapshot: " + targetPlayer.name + "[white] ([stat]#" + targetPlayer.id + "[])", false);
         }
     }
 
-    public void handlePlayerJoin(PlayerJoin event) {
-        createStatsForPlayer(event.player);
+    public void handlePlayerDisconnect(int playerId) {
+        Player targetPlayer = playerGroup.getByID(playerId);
+        // System.out.println("player disconnect: " + targetPlayer.name + "#" + targetPlayer.id);
+        playerStats.remove(targetPlayer);
+        if (debug) {
+            sendMessage("[cyan]Debug[] Player disconnect: " + targetPlayer.name + "[white] ([stat]#" + targetPlayer.id + "[])", false);
+        }
     }
-    */
+
+    public void handleWorldDataBegin() {
+        playerStats.clear();
+    }
+
+    public String formatPlayer(Player targetPlayer) {
+        String playerString;
+        if (targetPlayer != null) {
+            playerString = targetPlayer.name + "[white] ([stat]#" + targetPlayer.id + "[])";
+        } else {
+            playerString = "[lightgray]unknown[]";
+        }
+        return playerString;
+    }
+
+    public String formatColor(Color color) {
+        return "[#" + Integer.toHexString(((int)(255 * color.r) << 24) | ((int)(255 * color.g) << 16) | ((int)(255 * color.b) << 8)) + "]";
+    }
+
+    public String formatColor(Color color, String toFormat) {
+        return formatColor(color) + toFormat + "[]";
+    }
+
+    public String formatItem(Item item) {
+        if (item == null) return "(none)";
+        return formatColor(item.color, item.name);
+    }
+
+    public String formatTile(Tile tile) {
+        if (tile == null) return "(none)";
+        return "(" + tile.x + ", " + tile.y + ")";
+    }
+
+    public void handlePowerGraphSplit(Player targetPlayer, Tile tile, PowerGraph oldGraph, PowerGraph newGraph1, PowerGraph newGraph2) {
+        int oldGraphCount = oldGraph.all.size;
+        int newGraph1Count = newGraph1.all.size;
+        int newGraph2Count = newGraph2.all.size;
+
+        if (Math.min(oldGraphCount - newGraph1Count, oldGraphCount - newGraph2Count) > 20) {
+            sendMessage("[lightgray]Notice[] Power split by " + formatPlayer(targetPlayer) + " " + oldGraphCount + " -> " +
+                newGraph1Count + "/" + newGraph2Count + " " + formatTile(tile));
+        }
+    }
+
+    public void handleBlockBeforeConfigure(Tile tile, Player targetPlayer, int value) {
+        TileInfo info = getOrCreateTileInfo(tile);
+        if (targetPlayer != null) info.interactedPlayers.add(targetPlayer);
+        info.configureCount++;
+
+        Block block = tile.block();
+        if (block instanceof Sorter) {
+            Item oldItem = tile.<Sorter.SorterEntity>entity().sortItem;
+            Item newItem = content.item(value);
+            if (verbose) {
+                sendMessage("[green]Verbose[] " + formatPlayer(targetPlayer) + " configures sorter " +
+                    formatItem(oldItem) + " -> " + formatItem(newItem) + " " + formatTile(tile));
+            }
+        } else if (block instanceof MassDriver) {
+            Tile oldLink = world.tile(tile.<MassDriver.MassDriverEntity>entity().link);
+            Tile newLink = world.tile(value);
+            if (verbose) {
+                sendMessage("[green]Verbose[] " + formatPlayer(targetPlayer) + " configures mass driver at " +
+                    formatTile(tile) + " from " + formatTile(oldLink) + " to " + formatTile(newLink));
+            }
+        }
+    }
 }
