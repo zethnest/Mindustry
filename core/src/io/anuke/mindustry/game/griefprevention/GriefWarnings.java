@@ -6,6 +6,7 @@ import io.anuke.arc.collection.ObjectSet;
 import io.anuke.arc.graphics.Color;
 import io.anuke.arc.math.Mathf;
 import io.anuke.mindustry.content.Items;
+import io.anuke.mindustry.content.Liquids;
 import io.anuke.mindustry.entities.type.Player;
 import io.anuke.mindustry.entities.type.Unit;
 import io.anuke.mindustry.game.EventType.DepositEvent;
@@ -148,9 +149,22 @@ public class GriefWarnings {
         if (!info.constructSeen) {
             info.constructSeen = true;
             if (cblock instanceof NuclearReactor && !didWarn) {
-                String message = "[lightgray]Notice[] " + builder.name + "[white] ([stat]#" + builder.id + "[]) " +
-                    "is building a reactor at " + formatTile(tile);
-                sendMessage(message, false);
+                Array<Tile> bordering = tile.entity.proximity;
+                boolean hasCryo = false;
+                for (Tile neighbor : bordering) {
+                    if (
+                        neighbor.entity != null && neighbor.entity.liquids != null &&
+                        neighbor.entity.liquids.current() == Liquids.cryofluid
+                    ) {
+                        hasCryo = true;
+                        break;
+                    }
+                }
+                if (!hasCryo) {
+                    String message = "[lightgray]Notice[] " + builder.name + "[white] ([stat]#" + builder.id + "[]) " +
+                        "is building a reactor at " + formatTile(tile);
+                    sendMessage(message, false);
+                }
             }
         }
     }

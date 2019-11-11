@@ -23,6 +23,8 @@ public class CommandHandler {
     public CommandHandler() {
         addCommand("fixpower", this::fixPower);
         addCommand("verbose", this::verbose);
+        addCommand("debug", this::debug);
+        addCommand("spam", this::spam);
     }
 
     public void addCommand(String name, Cons<Context> handler) {
@@ -57,20 +59,60 @@ public class CommandHandler {
         }
         switch (ctx.args.get(1).toLowerCase()) {
             case "on":
-            case "true":
-            case "enable":
                 griefWarnings.verbose = true;
                 reply("Enabled verbose logging");
                 break;
             case "off":
-            case "false":
-            case "disable":
                 griefWarnings.verbose = false;
                 reply("Disabled verbose logging");
                 break;
             default:
                 reply("[scarlet]Not enough arguments");
                 reply("Usage: verbose <on|off>");
+        }
+    }
+
+    public void debug(Context ctx) {
+        if (ctx.args.size() < 2) {
+            reply("[scarlet]Not enough arguments");
+            reply("Usage: debug <on|off>");
+            return;
+        }
+        switch (ctx.args.get(1).toLowerCase()) {
+            case "on":
+                griefWarnings.debug = true;
+                reply("Enabled debug logging");
+                break;
+            case "off":
+                griefWarnings.debug = false;
+                reply("Disabled debug logging");
+                break;
+            default:
+                reply("[scarlet]Not enough arguments");
+                reply("Usage: debug <on|off>");
+        }
+    }
+
+    public void spam(Context ctx) {
+        if (ctx.args.size() < 2) {
+            reply("[scarlet]Not enough arguments");
+            reply("Usage: spam <on|off>");
+            return;
+        }
+        switch (ctx.args.get(1).toLowerCase()) {
+            case "on":
+                griefWarnings.verbose = true;
+                griefWarnings.debug = true;
+                reply("Enabled verbose and debug logging");
+                break;
+            case "off":
+                griefWarnings.verbose = false;
+                griefWarnings.debug = false;
+                reply("Disabled verbose and debug logging");
+                break;
+            default:
+                reply("[scarlet]Not enough arguments");
+                reply("Usage: spam <on|off>");
         }
     }
 }
