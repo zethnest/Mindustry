@@ -137,6 +137,7 @@ public class CommandHandler {
         TileInfo info = griefWarnings.tileInfo.get(tile);
         reply("====================");
         reply("Tile at " + griefWarnings.formatTile(tile));
+        reply("Current block: " + tile.block().name);
         if (info == null) {
             reply("[yellow]No information");
             return;
