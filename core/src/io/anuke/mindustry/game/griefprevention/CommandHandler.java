@@ -5,7 +5,9 @@ import io.anuke.arc.func.Cons;
 import io.anuke.arc.math.geom.Vector2;
 import io.anuke.mindustry.entities.type.Player;
 import io.anuke.mindustry.game.griefprevention.GriefWarnings.TileInfo;
+import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.Tile;
+import io.anuke.mindustry.world.blocks.BlockPart;
 
 import static io.anuke.mindustry.Vars.*;
 
@@ -114,13 +116,11 @@ public class CommandHandler {
         }
         switch (ctx.args.get(1).toLowerCase()) {
             case "on":
-                griefWarnings.verbose = true;
-                griefWarnings.debug = true;
+                griefWarnings.broadcast = true;
                 reply("Enabled broadcast logging");
                 break;
             case "off":
-                griefWarnings.verbose = false;
-                griefWarnings.debug = false;
+                griefWarnings.broadcast = false;
                 reply("Disabled broadcast logging");
                 break;
             default:
@@ -159,9 +159,12 @@ public class CommandHandler {
         Vector2 vec = Core.input.mouseWorld(Core.input.mouseX(), Core.input.mouseY());
         Tile tile = world.tile(world.toTile(vec.x), world.toTile(vec.y));
         TileInfo info = griefWarnings.tileInfo.get(tile);
+        if (info != null && info.link != null) info = info.link;
         reply("====================");
         reply("Tile at " + griefWarnings.formatTile(tile));
-        reply("Current block: " + tile.block().name);
+        Block currentBlock = tile.block();
+        if (currentBlock instanceof BlockPart) currentBlock = tile.link().block();
+        reply("Current block: " + currentBlock.name);
         if (info == null) {
             reply("[yellow]No information");
             return;

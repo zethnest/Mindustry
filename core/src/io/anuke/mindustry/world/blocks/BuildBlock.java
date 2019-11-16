@@ -54,13 +54,12 @@ public class BuildBlock extends Block{
 
     @Remote(called = Loc.server)
     public static void onDeconstructFinish(Tile tile, Block block, int builderID){
+        griefWarnings.handleBlockDeconstructFinish(tile, block, builderID);
         Team team = tile.getTeam();
         Effects.effect(Fx.breakBlock, tile.drawx(), tile.drawy(), block.size);
         world.removeBlock(tile);
         Events.fire(new BlockBuildEndEvent(tile, playerGroup.getByID(builderID), team, true));
         if(shouldPlay()) Sounds.breaks.at(tile, calcPitch(false));
-
-        griefWarnings.handleBlockDeconstructFinish(tile, block, builderID);
     }
 
     @Remote(called = Loc.server)

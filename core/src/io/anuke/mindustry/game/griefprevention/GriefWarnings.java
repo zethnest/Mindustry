@@ -5,6 +5,7 @@ import io.anuke.arc.collection.Array;
 import io.anuke.arc.collection.ObjectSet;
 import io.anuke.arc.graphics.Color;
 import io.anuke.arc.math.Mathf;
+import io.anuke.mindustry.content.Blocks;
 import io.anuke.mindustry.content.Items;
 import io.anuke.mindustry.content.Liquids;
 import io.anuke.mindustry.entities.type.Player;
@@ -40,8 +41,11 @@ public class GriefWarnings {
         }
     }
 
-    public class TileInfo {
+    public class TileInfo implements Cloneable {
         public Player constructedBy;
+        // deconstructedBy ambiguously holds possibly either someone whp attempted to deconstruct
+        // the current block or the person who deconstructed the previous block
+        // TODO: implement full block history
         public Player deconstructedBy;
         public boolean constructSeen = false;
         public boolean deconstructSeen = false;
@@ -49,6 +53,37 @@ public class GriefWarnings {
         public int configureCount = 0;
         public ObjectSet<Player> interactedPlayers = new ObjectSet<>();
         public Player lastRotatedBy;
+        public TileInfo link;
+
+        public TileInfo clone() {
+            try {
+                return (TileInfo)super.clone();
+            } catch (CloneNotSupportedException e) {
+                throw new RuntimeException("literally not possible");
+            }
+        }
+
+        public void reset() {
+            constructSeen = false;
+            deconstructSeen = false;
+            configureCount = 0;
+            interactedPlayers.clear();
+            lastRotatedBy = null;
+            link = null;
+        }
+
+        public void doLink(TileInfo primary) {
+            reset();
+            constructedBy = null;
+            link = primary;
+        }
+
+        public void unlink() {
+            if (link == null) return;
+            constructedBy = link.constructedBy;
+            deconstructedBy = link.deconstructedBy;
+            reset();
+        }
     }
 
     private Instant nextWarningTime = Instant.now();
@@ -116,13 +151,19 @@ public class GriefWarnings {
         // if (event.tile.block() == Blocks.air) tileInfo.remove(event.tile);
     }
 
-    public TileInfo getOrCreateTileInfo(Tile tile) {
+    public TileInfo getOrCreateTileInfo(Tile tile, boolean doLinking) {
         TileInfo info = tileInfo.get(tile);
         if (info == null) {
-            info = new TileInfo();
-            tileInfo.put(tile, info);
+            TileInfo newInfo = new TileInfo();
+            info = newInfo;
+            tileInfo.put(tile, newInfo);
+            if (doLinking) tile.getLinkedTiles(linked -> getOrCreateTileInfo(linked, false).doLink(newInfo));
         }
         return info;
+    }
+
+    public TileInfo getOrCreateTileInfo(Tile tile) {
+        return getOrCreateTileInfo(tile, true);
     }
 
     public PlayerStats getOrCreatePlayerStats(Player player) {
@@ -159,6 +200,9 @@ public class GriefWarnings {
         // one-time block construction warnings
         if (!info.constructSeen) {
             info.constructSeen = true;
+            if (previous != null && previous != Blocks.air) info.previousBlock = previous;
+            tile.getLinkedTiles(linked -> getOrCreateTileInfo(linked, false).doLink(info));
+
             if (!didWarn) {
                 if (cblock instanceof NuclearReactor) {
                     Array<Tile> bordering = tile.entity.proximity;
@@ -178,11 +222,13 @@ public class GriefWarnings {
                         sendMessage(message, false);
                     }
                 }
+                /* doesn't seem very necessary for now
                 if (cblock instanceof Fracker) {
                     String message = "[lightgray]Notice[] " + formatPlayer(builder) +
                         " is building an oil extractor at " + formatTile(tile);
                     sendMessage(message, false);
                 }
+                */
             }
         }
     }
@@ -190,6 +236,7 @@ public class GriefWarnings {
     public void handleBlockConstructFinish(Tile tile, Block block, int builderId) {
         TileInfo info = getOrCreateTileInfo(tile);
         Player targetPlayer = playerGroup.getByID(builderId);
+        tile.getLinkedTiles(linked -> getOrCreateTileInfo(linked, false).doLink(info));
         info.constructedBy = targetPlayer;
 
         if (debug && targetPlayer != null) {
@@ -208,10 +255,17 @@ public class GriefWarnings {
     }
 
     public void handleBlockDeconstructFinish(Tile tile, Block block, int builderId) {
+        // this runs before the block is actually removed
         TileInfo info = getOrCreateTileInfo(tile);
         Player targetPlayer = playerGroup.getByID(builderId);
         if (targetPlayer != null) info.deconstructedBy = targetPlayer;
         info.previousBlock = block;
+        info.reset();
+        tile.getLinkedTiles(linked -> {
+            TileInfo linkedInfo = getOrCreateTileInfo(linked, false);
+            linkedInfo.unlink();
+            linkedInfo.previousBlock = info.previousBlock;
+        });
 
         if (debug && targetPlayer != null) {
             sendMessage("[cyan]Debug[] " + targetPlayer.name + "[white] ([stat]#" + builderId +
