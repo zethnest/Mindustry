@@ -24,6 +24,7 @@ import io.anuke.mindustry.world.meta.StatUnit;
 import java.io.*;
 
 import static io.anuke.mindustry.Vars.tilesize;
+import static io.anuke.mindustry.Vars.griefWarnings;
 
 public class NuclearReactor extends PowerGenerator{
     protected final int timerFuel = timers++;
@@ -107,6 +108,7 @@ public class NuclearReactor extends PowerGenerator{
                 Effects.effect(Fx.reactorsmoke, tile.worldx() + Mathf.range(size * tilesize / 2f),
                 tile.worldy() + Mathf.random(size * tilesize / 2f));
             }
+            griefWarnings.handleThoriumReactorOverheating(tile, entity.heat);
         }
 
         entity.heat = Mathf.clamp(entity.heat);

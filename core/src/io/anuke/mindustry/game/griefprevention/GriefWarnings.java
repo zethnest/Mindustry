@@ -425,4 +425,8 @@ public class GriefWarnings {
                 tile.block().name + " at " + formatTile(tile));
         }
     }
+
+    public void handleThoriumReactorOverheating(Tile tile, float heat) {
+        sendMessage("[scarlet]WARNING[] Thorium reactor at " + formatTile(tile) + " is overheating! Heat: [accent]" + heat);
+    }
 }
