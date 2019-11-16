@@ -7,11 +7,11 @@ import io.anuke.arc.graphics.Color;
 import io.anuke.arc.math.Mathf;
 import io.anuke.mindustry.content.Items;
 import io.anuke.mindustry.content.Liquids;
+import io.anuke.mindustry.core.UI;
 import io.anuke.mindustry.entities.type.Player;
 import io.anuke.mindustry.entities.type.Unit;
 import io.anuke.mindustry.game.EventType.DepositEvent;
 import io.anuke.mindustry.game.EventType.TileChangeEvent;
-import io.anuke.mindustry.gen.Call;
 import io.anuke.mindustry.type.Item;
 import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.Tile;
@@ -20,6 +20,9 @@ import io.anuke.mindustry.world.blocks.distribution.Sorter;
 import io.anuke.mindustry.world.blocks.power.ItemLiquidGenerator;
 import io.anuke.mindustry.world.blocks.power.NuclearReactor;
 import io.anuke.mindustry.world.blocks.power.PowerGraph;
+import io.anuke.mindustry.world.blocks.storage.StorageBlock;
+import io.anuke.mindustry.world.blocks.storage.Vault;
+import io.anuke.mindustry.world.blocks.production.Fracker;
 
 import static io.anuke.mindustry.Vars.*;
 
@@ -76,13 +79,11 @@ public class GriefWarnings {
         }
         if (!Instant.now().isAfter(nextWarningTime) && throttled) return false;
         nextWarningTime = Instant.now().plusSeconds(1);
-        Call.sendChatMessage(message);
+        ui.chatfrag.addMessage(message, null);
         return true;
     }
 
-    public boolean sendMessage(String message) {
-        return sendMessage(message, true);
-    }
+    
 
     public float getDistanceToCore(Unit unit, float x, float y) {
         Tile nearestCore = unit.getClosestCore().getTile();
@@ -139,15 +140,16 @@ public class GriefWarnings {
             String message = "[scarlet]WARNING[] " + builder.name + "[white] ([stat]#" + builder.id
                     + "[]) is building a reactor [stat]" + Math.round(coreDistance) + "[] blocks from core. [stat]"
                     + Math.round(progress * 100) + "%";
-            sendMessage(message);
+            sendMessage(message, true);
             didWarn = true;
         } else if (coreDistance < 10 && cblock instanceof ItemLiquidGenerator) {
             String message = "[scarlet]WARNING[] " + builder.name + "[white] ([stat]#" + builder.id
                     + "[]) is building a generator [stat]" + Math.round(coreDistance) + "[] blocks from core. [stat]"
                     + Math.round(progress * 100) + "%";
-            sendMessage(message);
+            sendMessage(message, true);
             didWarn = true;
         }
+        
 
         // one-time block construction warnings
         if (!info.constructSeen) {
@@ -169,6 +171,11 @@ public class GriefWarnings {
                         "is building a reactor at " + formatTile(tile);
                     sendMessage(message, false);
                 }
+            }
+            if (cblock instanceof Fracker && !didWarn) {
+                String message = "[lightgray]Notice[] " + builder.name + "[white] ([stat]#" + builder.id + "[]) " +
+                        "is building a Oil Extractor at " + formatTile(tile);
+                    sendMessage(message, false);
             }
         }
     }
@@ -237,13 +244,25 @@ public class GriefWarnings {
         }
         if (item.equals(Items.thorium) && tile.block() instanceof NuclearReactor) {
             String message = "[scarlet]WARNING[] " + targetPlayer.name + "[white] ([stat]#" +
-                targetPlayer.id + "[]) transfers [accent]" + amount + "[] thorium to reactor. " + formatTile(tile);
-            sendMessage(message);
+                targetPlayer.id + "[]) transfers [accent]" + amount + "[] thorium to a reactor. " + formatTile(tile);
+            sendMessage(message, true);
             return;
         } else if (item.explosiveness > 0.5f && tile.block() instanceof ItemLiquidGenerator) {
             String message = "[scarlet]WARNING[] " + targetPlayer.name + "[white] ([stat]#" +
-                targetPlayer.id + "[]) transfers [accent]" + amount + "[] blast to generator. " + formatTile(tile);
-            sendMessage(message);
+                targetPlayer.id + "[]) transfers [accent]" + amount + "[] blast to a generator. " + formatTile(tile);
+            sendMessage(message, true);
+            return;
+        }
+        else if (item.explosiveness > 0.5f && tile.block() instanceof StorageBlock) {
+            String message = "[scarlet]WARNING[] " + targetPlayer.name + "[white] ([stat]#" +
+                targetPlayer.id + "[]) transfers [accent]" + amount + "[] blast to a Container. " + formatTile(tile);
+            sendMessage(message, true);
+            return;
+        }
+        else if (item.explosiveness > 0.5f && tile.block() instanceof Vault) {
+            String message = "[scarlet]WARNING[] " + targetPlayer.name + "[white] ([stat]#" +
+                targetPlayer.id + "[]) transfers [accent]" + amount + "[] blast to a Vault. " + formatTile(tile);
+            sendMessage(message, true);
             return;
         }
     }
@@ -305,7 +324,7 @@ public class GriefWarnings {
 
         if (Math.min(oldGraphCount - newGraph1Count, oldGraphCount - newGraph2Count) > 20) {
             sendMessage("[lightgray]Notice[] Power split by " + formatPlayer(targetPlayer) + " " + oldGraphCount + " -> " +
-                newGraph1Count + "/" + newGraph2Count + " " + formatTile(tile));
+                newGraph1Count + "/" + newGraph2Count + " " + formatTile(tile), true);
         }
     }
 
@@ -320,14 +339,14 @@ public class GriefWarnings {
             Item newItem = content.item(value);
             if (verbose) {
                 sendMessage("[green]Verbose[] " + formatPlayer(targetPlayer) + " configures sorter " +
-                    formatItem(oldItem) + " -> " + formatItem(newItem) + " " + formatTile(tile));
+                    formatItem(oldItem) + " -> " + formatItem(newItem) + " " + formatTile(tile), true);
             }
         } else if (block instanceof MassDriver) {
             Tile oldLink = world.tile(tile.<MassDriver.MassDriverEntity>entity().link);
             Tile newLink = world.tile(value);
             if (verbose) {
                 sendMessage("[green]Verbose[] " + formatPlayer(targetPlayer) + " configures mass driver at " +
-                    formatTile(tile) + " from " + formatTile(oldLink) + " to " + formatTile(newLink));
+                    formatTile(tile) + " from " + formatTile(oldLink) + " to " + formatTile(newLink), true);
             }
         }
     }
@@ -341,7 +360,7 @@ public class GriefWarnings {
 
         if (verbose) {
             sendMessage("[green]Verbose[] " + formatPlayer(targetPlayer) + " rotates " +
-                tile.block().name + " at " + formatTile(tile));
+                tile.block().name + " at " + formatTile(tile), true);
         }
     }
 }
