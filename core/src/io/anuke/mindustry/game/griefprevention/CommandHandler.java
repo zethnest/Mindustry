@@ -30,6 +30,7 @@ public class CommandHandler {
         addCommand("verbose", this::verbose);
         addCommand("debug", this::debug);
         addCommand("spam", this::spam);
+        addCommand("broadcast", this::broadcast);
         addCommand("tileinfo", this::tileInfo);
     }
 
@@ -102,6 +103,29 @@ public class CommandHandler {
             default:
                 reply("[scarlet]Not enough arguments");
                 reply("Usage: debug <on|off>");
+        }
+    }
+
+    public void broadcast(Context ctx) {
+        if (ctx.args.size() < 2) {
+            reply("[scarlet]Not enough arguments");
+            reply("Usage: broadcast <on|off>");
+            return;
+        }
+        switch (ctx.args.get(1).toLowerCase()) {
+            case "on":
+                griefWarnings.verbose = true;
+                griefWarnings.debug = true;
+                reply("Enabled broadcast logging");
+                break;
+            case "off":
+                griefWarnings.verbose = false;
+                griefWarnings.debug = false;
+                reply("Disabled broadcast logging");
+                break;
+            default:
+                reply("[scarlet]Not enough arguments");
+                reply("Usage: broadcast <on|off>");
         }
     }
 
