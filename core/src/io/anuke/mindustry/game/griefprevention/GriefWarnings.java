@@ -199,9 +199,9 @@ public class GriefWarnings {
 
         // one-time block construction warnings
         if (!info.constructSeen) {
-            info.constructSeen = true;
             if (previous != null && previous != Blocks.air) info.previousBlock = previous;
             tile.getLinkedTiles(linked -> getOrCreateTileInfo(linked, false).doLink(info));
+            info.constructSeen = true;
 
             if (!didWarn) {
                 if (cblock instanceof NuclearReactor) {

@@ -5,6 +5,7 @@ import io.anuke.arc.func.Cons;
 import io.anuke.arc.math.geom.Vector2;
 import io.anuke.mindustry.entities.type.Player;
 import io.anuke.mindustry.game.griefprevention.GriefWarnings.TileInfo;
+import io.anuke.mindustry.gen.Call;
 import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.world.blocks.BlockPart;
@@ -34,6 +35,8 @@ public class CommandHandler {
         addCommand("spam", this::spam);
         addCommand("broadcast", this::broadcast);
         addCommand("tileinfo", this::tileInfo);
+        addCommand("players", this::players);
+        addCommand("votekick", this::votekick);
     }
 
     public void addCommand(String name, Cons<Context> handler) {
@@ -180,5 +183,30 @@ public class CommandHandler {
             }
         } else reply("No interaction information recorded");
         if (info.lastRotatedBy != null) reply("Last rotated by: " + griefWarnings.formatPlayer(info.lastRotatedBy));
+    }
+
+    /** Get list of all players and their ids */
+    public void players(Context ctx) {
+        StringBuilder response = new StringBuilder("Players:");
+        for (Player player : playerGroup.all()) response.append("\n" + griefWarnings.formatPlayer(player));
+        reply(response.toString());
+    }
+
+    /** Votekick overlay to allow /votekick using ids when prefixed by # */
+    public void votekick(Context ctx) {
+        String name = String.join(" ", ctx.args.subList(1, ctx.args.size())).toLowerCase();
+        Player target;
+        if (name.startsWith("#")) {
+            int id = Integer.parseInt(name.substring(1));
+            target = playerGroup.getByID(id);
+        } else {
+            target = playerGroup.find(p -> p.name.toLowerCase().equals(name));
+        }
+        if (target == null) {
+            reply("[scarlet]Player not found!");
+            return;
+        }
+        reply("[cyan]Votekicking player:[] " + griefWarnings.formatPlayer(target));
+        Call.sendChatMessage("/votekick " + target.name);
     }
 }
