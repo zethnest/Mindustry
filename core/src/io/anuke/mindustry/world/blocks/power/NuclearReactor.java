@@ -108,8 +108,9 @@ public class NuclearReactor extends PowerGenerator{
                 Effects.effect(Fx.reactorsmoke, tile.worldx() + Mathf.range(size * tilesize / 2f),
                 tile.worldy() + Mathf.random(size * tilesize / 2f));
             }
-            griefWarnings.handleThoriumReactorOverheating(tile, entity.heat);
         }
+
+        griefWarnings.handleThoriumReactorHeat(tile, entity.heat);
 
         entity.heat = Mathf.clamp(entity.heat);
 

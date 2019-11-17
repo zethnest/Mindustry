@@ -50,6 +50,7 @@ public class GriefWarnings {
         public boolean constructSeen = false;
         public boolean deconstructSeen = false;
         public Block previousBlock;
+        public Block currentBlock;
         public int configureCount = 0;
         public ObjectSet<Player> interactedPlayers = new ObjectSet<>();
         public Player lastRotatedBy;
@@ -64,6 +65,7 @@ public class GriefWarnings {
         }
 
         public void reset() {
+            currentBlock = null;
             constructSeen = false;
             deconstructSeen = false;
             configureCount = 0;
@@ -74,12 +76,14 @@ public class GriefWarnings {
 
         public void doLink(TileInfo primary) {
             reset();
+            previousBlock = currentBlock;
             constructedBy = null;
             link = primary;
         }
 
         public void unlink() {
             if (link == null) return;
+            previousBlock = link.previousBlock;
             constructedBy = link.constructedBy;
             deconstructedBy = link.deconstructedBy;
             reset();
@@ -182,7 +186,7 @@ public class GriefWarnings {
         boolean didWarn = false;
         float coreDistance = getDistanceToCore(builder, tile);
         // persistent warnings that keep showing
-        if (coreDistance < 50 && cblock instanceof NuclearReactor) {
+        if (coreDistance < 30 && cblock instanceof NuclearReactor) {
             String message = "[scarlet]WARNING[] " + builder.name + "[white] ([stat]#" + builder.id
                     + "[]) is building a reactor [stat]" + Math.round(coreDistance) + "[] blocks from core. [stat]"
                     + Math.round(progress * 100) + "%";
@@ -202,6 +206,7 @@ public class GriefWarnings {
             if (previous != null && previous != Blocks.air) info.previousBlock = previous;
             tile.getLinkedTiles(linked -> getOrCreateTileInfo(linked, false).doLink(info));
             info.constructSeen = true;
+            info.currentBlock = cblock;
 
             if (!didWarn) {
                 if (cblock instanceof NuclearReactor) {
@@ -238,6 +243,7 @@ public class GriefWarnings {
         Player targetPlayer = playerGroup.getByID(builderId);
         tile.getLinkedTiles(linked -> getOrCreateTileInfo(linked, false).doLink(info));
         info.constructedBy = targetPlayer;
+        info.currentBlock = block;
 
         if (debug && targetPlayer != null) {
             sendMessage("[cyan]Debug[] " + formatPlayer(targetPlayer) + " builds [accent]" +
@@ -259,13 +265,9 @@ public class GriefWarnings {
         TileInfo info = getOrCreateTileInfo(tile);
         Player targetPlayer = playerGroup.getByID(builderId);
         if (targetPlayer != null) info.deconstructedBy = targetPlayer;
-        info.previousBlock = block;
         info.reset();
-        tile.getLinkedTiles(linked -> {
-            TileInfo linkedInfo = getOrCreateTileInfo(linked, false);
-            linkedInfo.unlink();
-            linkedInfo.previousBlock = info.previousBlock;
-        });
+        info.previousBlock = block;
+        tile.getLinkedTiles(linked -> getOrCreateTileInfo(linked, false).unlink());
 
         if (debug && targetPlayer != null) {
             sendMessage("[cyan]Debug[] " + targetPlayer.name + "[white] ([stat]#" + builderId +
@@ -426,7 +428,9 @@ public class GriefWarnings {
         }
     }
 
-    public void handleThoriumReactorOverheating(Tile tile, float heat) {
-        sendMessage("[scarlet]WARNING[] Thorium reactor at " + formatTile(tile) + " is overheating! Heat: [accent]" + heat);
+    public void handleThoriumReactorHeat(Tile tile, float heat) {
+        if (heat > 0.15f) {
+            sendMessage("[scarlet]WARNING[] Thorium reactor at " + formatTile(tile) + " is overheating! Heat: [accent]" + heat);
+        }
     }
 }
