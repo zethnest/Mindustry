@@ -4,7 +4,6 @@ import io.anuke.arc.Core;
 import io.anuke.arc.func.Cons;
 import io.anuke.arc.math.geom.Vector2;
 import io.anuke.mindustry.entities.type.Player;
-import io.anuke.mindustry.game.griefprevention.GriefWarnings.TileInfo;
 import io.anuke.mindustry.gen.Call;
 import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.Tile;
@@ -78,10 +77,12 @@ public class CommandHandler {
         switch (ctx.args.get(1).toLowerCase()) {
             case "on":
                 griefWarnings.verbose = true;
+                griefWarnings.saveSettings();
                 reply("Enabled verbose logging");
                 break;
             case "off":
                 griefWarnings.verbose = false;
+                griefWarnings.saveSettings();
                 reply("Disabled verbose logging");
                 break;
             default:
@@ -99,10 +100,12 @@ public class CommandHandler {
         switch (ctx.args.get(1).toLowerCase()) {
             case "on":
                 griefWarnings.debug = true;
+                griefWarnings.saveSettings();
                 reply("Enabled debug logging");
                 break;
             case "off":
                 griefWarnings.debug = false;
+                griefWarnings.saveSettings();
                 reply("Disabled debug logging");
                 break;
             default:
@@ -120,10 +123,12 @@ public class CommandHandler {
         switch (ctx.args.get(1).toLowerCase()) {
             case "on":
                 griefWarnings.broadcast = true;
+                griefWarnings.saveSettings();
                 reply("Enabled broadcast logging");
                 break;
             case "off":
                 griefWarnings.broadcast = false;
+                griefWarnings.saveSettings();
                 reply("Disabled broadcast logging");
                 break;
             default:
@@ -142,11 +147,13 @@ public class CommandHandler {
             case "on":
                 griefWarnings.verbose = true;
                 griefWarnings.debug = true;
+                griefWarnings.saveSettings();
                 reply("Enabled verbose and debug logging");
                 break;
             case "off":
                 griefWarnings.verbose = false;
                 griefWarnings.debug = false;
+                griefWarnings.saveSettings();
                 reply("Disabled verbose and debug logging");
                 break;
             default:

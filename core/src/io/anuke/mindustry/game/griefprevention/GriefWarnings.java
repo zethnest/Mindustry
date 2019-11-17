@@ -1,8 +1,8 @@
 package io.anuke.mindustry.game.griefprevention;
 
+import io.anuke.arc.Core;
 import io.anuke.arc.Events;
 import io.anuke.arc.collection.Array;
-import io.anuke.arc.collection.ObjectSet;
 import io.anuke.arc.graphics.Color;
 import io.anuke.arc.math.Mathf;
 import io.anuke.mindustry.content.Blocks;
@@ -23,80 +23,20 @@ import io.anuke.mindustry.world.blocks.power.NuclearReactor;
 import io.anuke.mindustry.world.blocks.power.PowerGraph;
 import io.anuke.mindustry.world.blocks.storage.StorageBlock;
 import io.anuke.mindustry.world.blocks.storage.Vault;
-import io.anuke.mindustry.world.blocks.production.Fracker;
 
 import static io.anuke.mindustry.Vars.*;
 
-import java.lang.ref.WeakReference;
 import java.time.Instant;
 import java.util.WeakHashMap;
 
 public class GriefWarnings {
-    public class PlayerStats {
-        // don't prevent garbage collection
-        public WeakReference<Player> player;
-
-        public PlayerStats(Player player) {
-            this.player = new WeakReference<>(player);
-        }
-    }
-
-    public class TileInfo implements Cloneable {
-        public Player constructedBy;
-        // deconstructedBy ambiguously holds possibly either someone whp attempted to deconstruct
-        // the current block or the person who deconstructed the previous block
-        // TODO: implement full block history
-        public Player deconstructedBy;
-        public boolean constructSeen = false;
-        public boolean deconstructSeen = false;
-        public Block previousBlock;
-        public Block currentBlock;
-        public int configureCount = 0;
-        public ObjectSet<Player> interactedPlayers = new ObjectSet<>();
-        public Player lastRotatedBy;
-        public TileInfo link;
-
-        public TileInfo clone() {
-            try {
-                return (TileInfo)super.clone();
-            } catch (CloneNotSupportedException e) {
-                throw new RuntimeException("literally not possible");
-            }
-        }
-
-        public void reset() {
-            currentBlock = null;
-            constructSeen = false;
-            deconstructSeen = false;
-            configureCount = 0;
-            interactedPlayers.clear();
-            lastRotatedBy = null;
-            link = null;
-        }
-
-        public void doLink(TileInfo primary) {
-            reset();
-            previousBlock = currentBlock;
-            constructedBy = null;
-            link = primary;
-        }
-
-        public void unlink() {
-            if (link == null) return;
-            previousBlock = link.previousBlock;
-            constructedBy = link.constructedBy;
-            deconstructedBy = link.deconstructedBy;
-            reset();
-        }
-    }
-
     private Instant nextWarningTime = Instant.now();
     public WeakHashMap<Player, PlayerStats> playerStats = new WeakHashMap<>();
     /** whether or not to send warnings to all players */
     public boolean broadcast = true;
-    // whether or not to be very noisy about everything
+    /** whether or not to be very noisy about everything */
     public boolean verbose = false;
-    // whether or not to flat out state the obvious, pissing everyone off
+    /** whether or not to flat out state the obvious, pissing everyone off */
     public boolean debug = false;
     public WeakHashMap<Tile, TileInfo> tileInfo = new WeakHashMap<>();
 
@@ -106,6 +46,20 @@ public class GriefWarnings {
     public GriefWarnings() {
         Events.on(DepositEvent.class, this::handleDeposit);
         Events.on(TileChangeEvent.class, this::handleTileChange);
+
+        loadSettings();
+    }
+
+    public void loadSettings() {
+        broadcast = Core.settings.getBool("griefwarnings.broadcast", false);
+        verbose = Core.settings.getBool("griefwarnings.verbose", false);
+        debug = Core.settings.getBool("griefwarnings.debug", false);
+    }
+
+    public void saveSettings() {
+        Core.settings.put("griefwarnings.brodcast", broadcast);
+        Core.settings.put("griefwarnings.verbose", verbose);
+        Core.settings.put("griefwarnings.debug", debug);
     }
 
     public boolean sendMessage(String message, boolean throttled) {
