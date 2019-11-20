@@ -60,6 +60,7 @@ public class GriefWarnings {
         Core.settings.put("griefwarnings.brodcast", broadcast);
         Core.settings.put("griefwarnings.verbose", verbose);
         Core.settings.put("griefwarnings.debug", debug);
+        Core.settings.save();
     }
 
     public boolean sendMessage(String message, boolean throttled) {
