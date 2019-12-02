@@ -38,6 +38,9 @@ public class GriefWarnings {
     public boolean verbose = false;
     /** whether or not to flat out state the obvious, pissing everyone off */
     public boolean debug = false;
+    /** whether or not to show the persistent tileinfo display */
+    public boolean tileInfoHud = false;
+
     public WeakHashMap<Tile, TileInfo> tileInfo = new WeakHashMap<>();
 
     public CommandHandler commandHandler = new CommandHandler();
@@ -54,12 +57,14 @@ public class GriefWarnings {
         broadcast = Core.settings.getBool("griefwarnings.broadcast", false);
         verbose = Core.settings.getBool("griefwarnings.verbose", false);
         debug = Core.settings.getBool("griefwarnings.debug", false);
+        tileInfoHud = Core.settings.getBool("griefwarnings.tileinfohud", false);
     }
 
     public void saveSettings() {
-        Core.settings.put("griefwarnings.brodcast", broadcast);
+        Core.settings.put("griefwarnings.broadcast", broadcast);
         Core.settings.put("griefwarnings.verbose", verbose);
         Core.settings.put("griefwarnings.debug", debug);
+        Core.settings.put("griefwarnings.tileinfohud", tileInfoHud);
         Core.settings.save();
     }
 

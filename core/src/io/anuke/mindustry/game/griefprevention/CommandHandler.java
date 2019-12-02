@@ -1,6 +1,7 @@
 package io.anuke.mindustry.game.griefprevention;
 
 import io.anuke.arc.Core;
+import io.anuke.arc.collection.Array;
 import io.anuke.arc.func.Cons;
 import io.anuke.arc.math.geom.Vector2;
 import io.anuke.mindustry.entities.type.Player;
@@ -29,13 +30,17 @@ public class CommandHandler {
 
     public CommandHandler() {
         addCommand("fixpower", this::fixPower);
-        addCommand("verbose", this::verbose);
-        addCommand("debug", this::debug);
-        addCommand("spam", this::spam);
-        addCommand("broadcast", this::broadcast);
+        addCommand("verbose", createToggle("verbose", "verbose logging", v -> griefWarnings.verbose = v));
+        addCommand("debug", createToggle("debug", "debug logging", v -> griefWarnings.debug = v));
+        addCommand("spam", createToggle("spam", "verbose and debug logging", v -> {
+            griefWarnings.verbose = v;
+            griefWarnings.debug = v;
+        }));
+        addCommand("broadcast", createToggle("broadcast", "broadcast of messages", v -> griefWarnings.broadcast = v));
         addCommand("tileinfo", this::tileInfo);
         addCommand("players", this::players);
         addCommand("votekick", this::votekick);
+        addCommand("tileinfohud", createToggle("tileinfohud", "tile information hud", v -> griefWarnings.tileInfoHud = v));
     }
 
     public void addCommand(String name, Cons<Context> handler) {
@@ -68,128 +73,69 @@ public class CommandHandler {
         reply("[green]Done");
     }
 
-    public void verbose(Context ctx) {
-        if (ctx.args.size() < 2) {
-            reply("[scarlet]Not enough arguments");
-            reply("Usage: verbose <on|off>");
-            return;
-        }
-        switch (ctx.args.get(1).toLowerCase()) {
-            case "on":
-                griefWarnings.verbose = true;
-                griefWarnings.saveSettings();
-                reply("Enabled verbose logging");
-                break;
-            case "off":
-                griefWarnings.verbose = false;
-                griefWarnings.saveSettings();
-                reply("Disabled verbose logging");
-                break;
-            default:
+    public Cons<Context> createToggle(String name, String description, Cons<Boolean> consumer) {
+        return ctx -> {
+            if (ctx.args.size() < 2) {
                 reply("[scarlet]Not enough arguments");
-                reply("Usage: verbose <on|off>");
-        }
+                reply("Usage: " + name + " <on|off>");
+                return;
+            }
+            switch (ctx.args.get(1).toLowerCase()) {
+                case "on":
+                case "true":
+                    consumer.get(true);
+                    reply("Enabled " + description);
+                    break;
+                case "off":
+                case "false":
+                    consumer.get(false);
+                    reply("Disabled " + description);
+                    break;
+                default:
+                    reply("[scarlet]Not enough arguments");
+                    reply("Usage: " + name + " <on|off>");
+                    return;
+            }
+            griefWarnings.saveSettings();
+        };
     }
 
-    public void debug(Context ctx) {
-        if (ctx.args.size() < 2) {
-            reply("[scarlet]Not enough arguments");
-            reply("Usage: debug <on|off>");
-            return;
+    public String tileInfo(Tile tile) {
+        TileInfo info = griefWarnings.tileInfo.get(tile);
+        if (info != null && info.link != null) info = info.link;
+        Array<String> out = new Array<>();
+        out.add("Tile at " + griefWarnings.formatTile(tile));
+        Block currentBlock = tile.block();
+        if (currentBlock == null) {
+            out.add("[yellow]Nonexistent block");
+            return String.join("\n", out);
         }
-        switch (ctx.args.get(1).toLowerCase()) {
-            case "on":
-                griefWarnings.debug = true;
-                griefWarnings.saveSettings();
-                reply("Enabled debug logging");
-                break;
-            case "off":
-                griefWarnings.debug = false;
-                griefWarnings.saveSettings();
-                reply("Disabled debug logging");
-                break;
-            default:
-                reply("[scarlet]Not enough arguments");
-                reply("Usage: debug <on|off>");
+        if (currentBlock instanceof BlockPart) currentBlock = tile.link().block();
+        out.add("Current block: " + currentBlock.name);
+        if (info == null) {
+            out.add("[yellow]No information");
+            return String.join("\n", out);
         }
+        out.add("Constructed by: " + griefWarnings.formatPlayer(info.constructedBy));
+        out.add("Deconstructed by: " + griefWarnings.formatPlayer(info.deconstructedBy));
+        if (info.previousBlock != null) out.add("Block that was here: " + info.previousBlock.name);
+        out.add("Configured [accent]" + info.configureCount + "[] times");
+        if (info.interactedPlayers.size > 0) {
+            out.add("Players who have interacted with this block:");
+            for (Player player : info.interactedPlayers.iterator()) {
+                out.add("  - " + griefWarnings.formatPlayer(player));
+            }
+        } else out.add("No interaction information recorded");
+        if (info.lastRotatedBy != null) out.add("Last rotated by: " + griefWarnings.formatPlayer(info.lastRotatedBy));
+        return String.join("\n", out);
     }
 
-    public void broadcast(Context ctx) {
-        if (ctx.args.size() < 2) {
-            reply("[scarlet]Not enough arguments");
-            reply("Usage: broadcast <on|off>");
-            return;
-        }
-        switch (ctx.args.get(1).toLowerCase()) {
-            case "on":
-                griefWarnings.broadcast = true;
-                griefWarnings.saveSettings();
-                reply("Enabled broadcast logging");
-                break;
-            case "off":
-                griefWarnings.broadcast = false;
-                griefWarnings.saveSettings();
-                reply("Disabled broadcast logging");
-                break;
-            default:
-                reply("[scarlet]Not enough arguments");
-                reply("Usage: broadcast <on|off>");
-        }
-    }
-
-    public void spam(Context ctx) {
-        if (ctx.args.size() < 2) {
-            reply("[scarlet]Not enough arguments");
-            reply("Usage: spam <on|off>");
-            return;
-        }
-        switch (ctx.args.get(1).toLowerCase()) {
-            case "on":
-                griefWarnings.verbose = true;
-                griefWarnings.debug = true;
-                griefWarnings.saveSettings();
-                reply("Enabled verbose and debug logging");
-                break;
-            case "off":
-                griefWarnings.verbose = false;
-                griefWarnings.debug = false;
-                griefWarnings.saveSettings();
-                reply("Disabled verbose and debug logging");
-                break;
-            default:
-                reply("[scarlet]Not enough arguments");
-                reply("Usage: spam <on|off>");
-        }
-    }
-
-    /**
-     * Get stored information for the tile under the cursor
-     */
+    /** Get stored information for the tile under the cursor */
     public void tileInfo(Context ctx) {
         Vector2 vec = Core.input.mouseWorld(Core.input.mouseX(), Core.input.mouseY());
         Tile tile = world.tile(world.toTile(vec.x), world.toTile(vec.y));
-        TileInfo info = griefWarnings.tileInfo.get(tile);
-        if (info != null && info.link != null) info = info.link;
         reply("====================");
-        reply("Tile at " + griefWarnings.formatTile(tile));
-        Block currentBlock = tile.block();
-        if (currentBlock instanceof BlockPart) currentBlock = tile.link().block();
-        reply("Current block: " + currentBlock.name);
-        if (info == null) {
-            reply("[yellow]No information");
-            return;
-        }
-        reply("Constructed by: " + griefWarnings.formatPlayer(info.constructedBy));
-        reply("Deconstructed by: " + griefWarnings.formatPlayer(info.deconstructedBy));
-        if (info.previousBlock != null) reply("Block that was here: " + info.previousBlock.name);
-        reply("Configured [accent]" + info.configureCount + "[] times");
-        if (info.interactedPlayers.size > 0) {
-            reply("Players who have interacted with this block:");
-            for (Player player : info.interactedPlayers.iterator()) {
-                reply("  - " + griefWarnings.formatPlayer(player));
-            }
-        } else reply("No interaction information recorded");
-        if (info.lastRotatedBy != null) reply("Last rotated by: " + griefWarnings.formatPlayer(info.lastRotatedBy));
+        reply(tileInfo(tile));
     }
 
     /** Get list of all players and their ids */

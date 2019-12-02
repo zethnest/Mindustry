@@ -22,6 +22,7 @@ import io.anuke.mindustry.entities.*;
 import io.anuke.mindustry.entities.type.*;
 import io.anuke.mindustry.game.*;
 import io.anuke.mindustry.game.EventType.*;
+import io.anuke.mindustry.game.griefprevention.TileInfoHud;
 import io.anuke.mindustry.gen.*;
 import io.anuke.mindustry.graphics.*;
 import io.anuke.mindustry.input.*;
@@ -338,6 +339,12 @@ public class HudFragment extends Fragment{
         parent.fill(t -> {
             t.bottom().visible(() -> control.saves.isSaving());
             t.add("$saveload").style(Styles.outlineLabel);
+        });
+
+        //persistent tileinfo
+        parent.fill(t -> {
+            t.top().visible(() -> griefWarnings.tileInfoHud);
+            t.add(new TileInfoHud());
         });
 
         blockfrag.build(parent);
