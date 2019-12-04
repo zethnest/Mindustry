@@ -298,6 +298,10 @@ public class ItemBridge extends Block{
 
     @Override
     public boolean acceptLiquid(Tile tile, Tile source, Liquid liquid, float amount){
+        if (!hasLiquids) {
+            griefWarnings.handleItemBridgeCrashCondition(tile, source);
+            return false;
+        }
         if(tile.getTeam() != source.getTeam()) return false;
 
         ItemBridgeEntity entity = tile.entity();

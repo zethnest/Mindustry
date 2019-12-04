@@ -5,6 +5,8 @@ import io.anuke.arc.Events;
 import io.anuke.arc.collection.Array;
 import io.anuke.arc.graphics.Color;
 import io.anuke.arc.math.Mathf;
+import io.anuke.arc.util.ArcAnnotate.NonNull;
+import io.anuke.arc.util.Log;
 import io.anuke.mindustry.content.Blocks;
 import io.anuke.mindustry.content.Items;
 import io.anuke.mindustry.content.Liquids;
@@ -13,6 +15,7 @@ import io.anuke.mindustry.entities.type.Unit;
 import io.anuke.mindustry.game.EventType.DepositEvent;
 import io.anuke.mindustry.game.EventType.TileChangeEvent;
 import io.anuke.mindustry.gen.Call;
+import io.anuke.mindustry.net.Packets.AdminAction;
 import io.anuke.mindustry.type.Item;
 import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.Tile;
@@ -25,6 +28,7 @@ import io.anuke.mindustry.world.blocks.storage.StorageBlock;
 import io.anuke.mindustry.world.blocks.storage.Vault;
 
 import static io.anuke.mindustry.Vars.*;
+import static io.anuke.mindustry.Vars.player;
 
 import java.time.Instant;
 import java.util.WeakHashMap;
@@ -40,6 +44,8 @@ public class GriefWarnings {
     public boolean debug = false;
     /** whether or not to show the persistent tileinfo display */
     public boolean tileInfoHud = false;
+    /** whether or not to automatically ban when we are 100% sure that player is griefing (eg. intentionally crashing other clients) */
+    public boolean autoban = false;
 
     public WeakHashMap<Tile, TileInfo> tileInfo = new WeakHashMap<>();
 
@@ -58,6 +64,7 @@ public class GriefWarnings {
         verbose = Core.settings.getBool("griefwarnings.verbose", false);
         debug = Core.settings.getBool("griefwarnings.debug", false);
         tileInfoHud = Core.settings.getBool("griefwarnings.tileinfohud", false);
+        autoban = Core.settings.getBool("griefwarnings.autoban", false);
     }
 
     public void saveSettings() {
@@ -65,6 +72,7 @@ public class GriefWarnings {
         Core.settings.put("griefwarnings.verbose", verbose);
         Core.settings.put("griefwarnings.debug", debug);
         Core.settings.put("griefwarnings.tileinfohud", tileInfoHud);
+        Core.settings.put("griefwarnings.autoban", autoban);
         Core.settings.save();
     }
 
@@ -81,7 +89,8 @@ public class GriefWarnings {
         if (!Instant.now().isAfter(nextWarningTime) && throttled) return false;
         nextWarningTime = Instant.now().plusSeconds(1);
         if (broadcast) Call.sendChatMessage(message);
-        else ui.chatfrag.addMessage(message, null);
+        else if (net.client()) ui.chatfrag.addMessage(message, null);
+        else if (net.server()) Log.info("[griefwarnings] " + message);
         return true;
     }
 
@@ -392,5 +401,29 @@ public class GriefWarnings {
         if (heat > 0.15f) {
             sendMessage("[scarlet]WARNING[] Thorium reactor at " + formatTile(tile) + " is overheating! Heat: [accent]" + heat);
         }
+    }
+
+    public void handleItemBridgeCrashCondition(Tile tile, Tile source) {
+        TileInfo info = getTileInfo(tile);
+        Player target = null;
+        if (info != null) target = info.constructedBy;
+        sendMessage("[scarlet]ALERT[] Item bridge/liquid junction crash condition detected at " + formatTile(tile) + " built by " + formatPlayer(target));
+        if (target != null) doAutoban(target, "item bridge crash");
+    }
+
+    public boolean doAutoban(Player target, String reason) {
+        if (player.isAdmin && target != null && autoban) {
+            Call.onAdminRequest(target, AdminAction.ban);
+            String message = "[yellow]Autoban[] Banning player " + formatPlayer(target);
+            if (reason != null) message += " (" + reason + ")";
+            sendMessage(message, false);
+            return true;
+        } else return false;
+    }
+
+    public TileInfo getTileInfo(Tile tile) {
+        TileInfo info = tileInfo.get(tile);
+        if (info != null && info.link != null) info = info.link;
+        return info;
     }
 }

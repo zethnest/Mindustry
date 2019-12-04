@@ -48,6 +48,7 @@ public class ChatFragment extends Table{
         setFillParent(true);
         font = Fonts.def;
 
+        /* always show chat
         visible(() -> {
             if(!net.active() && messages.size > 0){
                 clearMessages();
@@ -59,10 +60,11 @@ public class ChatFragment extends Table{
 
             return net.active();
         });
+        */
 
         update(() -> {
 
-            if(net.active() && input.keyTap(Binding.chat) && (scene.getKeyboardFocus() == chatfield || scene.getKeyboardFocus() == null)){
+            if(/* net.active() && */ input.keyTap(Binding.chat) && (scene.getKeyboardFocus() == chatfield || scene.getKeyboardFocus() == null)){
                 toggle();
             }
 

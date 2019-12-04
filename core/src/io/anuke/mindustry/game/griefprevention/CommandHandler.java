@@ -41,6 +41,7 @@ public class CommandHandler {
         addCommand("players", this::players);
         addCommand("votekick", this::votekick);
         addCommand("tileinfohud", createToggle("tileinfohud", "tile information hud", v -> griefWarnings.tileInfoHud = v));
+        addCommand("autoban", createToggle("autoban", "automatic bans", v -> griefWarnings.autoban = v));
     }
 
     public void addCommand(String name, Cons<Context> handler) {
@@ -101,8 +102,7 @@ public class CommandHandler {
     }
 
     public String tileInfo(Tile tile) {
-        TileInfo info = griefWarnings.tileInfo.get(tile);
-        if (info != null && info.link != null) info = info.link;
+        TileInfo info = griefWarnings.getTileInfo(tile);
         Array<String> out = new Array<>();
         out.add("Tile at " + griefWarnings.formatTile(tile));
         Block currentBlock = tile.block();
