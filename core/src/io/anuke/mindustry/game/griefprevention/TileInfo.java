@@ -17,6 +17,7 @@ public class TileInfo implements Cloneable {
     public int configureCount = 0;
     public ObjectSet<Player> interactedPlayers = new ObjectSet<>();
     public Player lastRotatedBy;
+    public Player lastInteractedBy;
     public TileInfo link;
 
     public TileInfo clone() {
@@ -50,5 +51,11 @@ public class TileInfo implements Cloneable {
         constructedBy = link.constructedBy;
         deconstructedBy = link.deconstructedBy;
         reset();
+    }
+
+    public void logInteraction(Player target) {
+        interactedPlayers.add(target);
+        lastInteractedBy = target;
+        configureCount++;
     }
 }

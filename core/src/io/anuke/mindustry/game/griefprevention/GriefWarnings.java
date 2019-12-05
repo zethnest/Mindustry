@@ -363,8 +363,7 @@ public class GriefWarnings {
 
     public void handleBlockBeforeConfigure(Tile tile, Player targetPlayer, int value) {
         TileInfo info = getOrCreateTileInfo(tile);
-        if (targetPlayer != null) info.interactedPlayers.add(targetPlayer);
-        info.configureCount++;
+        if (targetPlayer != null) info.logInteraction(targetPlayer);
 
         Block block = tile.block();
         if (block instanceof Sorter) {
@@ -388,7 +387,7 @@ public class GriefWarnings {
         TileInfo info = getOrCreateTileInfo(tile);
         if (targetPlayer != null) {
             info.lastRotatedBy = targetPlayer;
-            info.interactedPlayers.add(targetPlayer);
+            info.logInteraction(targetPlayer);
         }
 
         if (verbose) {
@@ -411,10 +410,10 @@ public class GriefWarnings {
         if (target != null) doAutoban(target, "item bridge crash");
     }
 
-    public boolean doAutoban(Player target, String reason) {
-        if (player.isAdmin && target != null && autoban) {
-            Call.onAdminRequest(target, AdminAction.ban);
-            String message = "[yellow]Autoban[] Banning player " + formatPlayer(target);
+    public boolean doAutoban(Player targetPlayer, String reason) {
+        if (player.isAdmin && targetPlayer != null && autoban) {
+            Call.onAdminRequest(targetPlayer, AdminAction.ban);
+            String message = "[yellow]Autoban[] Banning player " + formatPlayer(targetPlayer);
             if (reason != null) message += " (" + reason + ")";
             sendMessage(message, false);
             return true;
@@ -425,5 +424,12 @@ public class GriefWarnings {
         TileInfo info = tileInfo.get(tile);
         if (info != null && info.link != null) info = info.link;
         return info;
+    }
+
+    public void handleMessageBlockText(Player targetPlayer, Tile tile, String text) {
+        // TODO: maybe log what the text said?
+        if (targetPlayer == null) return;
+        TileInfo info = getOrCreateTileInfo(tile);
+        info.logInteraction(targetPlayer);
     }
 }

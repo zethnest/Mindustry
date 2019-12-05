@@ -4,9 +4,14 @@ import io.anuke.arc.Core;
 import io.anuke.arc.collection.Array;
 import io.anuke.arc.func.Cons;
 import io.anuke.arc.math.geom.Vector2;
+import io.anuke.mindustry.entities.traits.BuilderTrait.BuildRequest;
 import io.anuke.mindustry.entities.type.Player;
+import io.anuke.mindustry.game.Team;
+import io.anuke.mindustry.game.Teams.BrokenBlock;
+import io.anuke.mindustry.game.Teams.TeamData;
 import io.anuke.mindustry.gen.Call;
 import io.anuke.mindustry.world.Block;
+import io.anuke.mindustry.world.Build;
 import io.anuke.mindustry.world.Tile;
 import io.anuke.mindustry.world.blocks.BlockPart;
 
@@ -42,6 +47,7 @@ public class CommandHandler {
         addCommand("votekick", this::votekick);
         addCommand("tileinfohud", createToggle("tileinfohud", "tile information hud", v -> griefWarnings.tileInfoHud = v));
         addCommand("autoban", createToggle("autoban", "automatic bans", v -> griefWarnings.autoban = v));
+        addCommand("rebuild", this::rebuild);
     }
 
     public void addCommand(String name, Cons<Context> handler) {
@@ -128,6 +134,7 @@ public class CommandHandler {
                 out.add("  - " + griefWarnings.formatPlayer(player));
             }
         } else out.add("No interaction information recorded");
+        if (info.lastInteractedBy != null) out.add("Last interacted by: " + griefWarnings.formatPlayer(info.lastInteractedBy));
         if (info.lastRotatedBy != null) out.add("Last rotated by: " + griefWarnings.formatPlayer(info.lastRotatedBy));
         return out;
     }
@@ -168,5 +175,23 @@ public class CommandHandler {
         }
         reply("[cyan]Votekicking player:[] " + griefWarnings.formatPlayer(target));
         Call.sendChatMessage("/votekick " + target.name);
+    }
+
+    /** Attempt rebuild of destroyed blocks */
+    public void rebuild(Context ctx) {
+        Team team = player.getTeam();
+        TeamData data = state.teams.get(team);
+        if (data.brokenBlocks.isEmpty()) {
+            reply("Broken blocks queue is empty");
+            return;
+        }
+        for (BrokenBlock broken : data.brokenBlocks) {
+            if(Build.validPlace(team, broken.x, broken.y, content.block(broken.block), broken.rotation)) {
+                Block block = content.block(broken.block);
+                reply("Adding block " + block.name + " at (" + broken.x + ", " + broken.y + ")");
+                player.buildQueue().addLast(new BuildRequest(broken.x, broken.y, broken.rotation, block).configure(broken.config));
+            }
+        }
+        reply("Added rebuild to build queue");
     }
 }
