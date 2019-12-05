@@ -355,7 +355,7 @@ public class GriefWarnings {
         int newGraph1Count = newGraph1.all.size;
         int newGraph2Count = newGraph2.all.size;
 
-        if (Math.min(oldGraphCount - newGraph1Count, oldGraphCount - newGraph2Count) > 20) {
+        if (Math.min(oldGraphCount - newGraph1Count, oldGraphCount - newGraph2Count) > 50) {
             sendMessage("[lightgray]Notice[] Power split by " + formatPlayer(targetPlayer) + " " + oldGraphCount + " -> " +
                 newGraph1Count + "/" + newGraph2Count + " " + formatTile(tile));
         }

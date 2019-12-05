@@ -101,20 +101,20 @@ public class CommandHandler {
         };
     }
 
-    public String tileInfo(Tile tile) {
+    public Array<String> tileInfo(Tile tile) {
         TileInfo info = griefWarnings.getTileInfo(tile);
         Array<String> out = new Array<>();
         out.add("Tile at " + griefWarnings.formatTile(tile));
         Block currentBlock = tile.block();
         if (currentBlock == null) {
             out.add("[yellow]Nonexistent block");
-            return String.join("\n", out);
+            return out;
         }
         if (currentBlock instanceof BlockPart) currentBlock = tile.link().block();
         out.add("Current block: " + currentBlock.name);
         if (info == null) {
             out.add("[yellow]No information");
-            return String.join("\n", out);
+            return out;
         }
         out.add("Constructed by: " + griefWarnings.formatPlayer(info.constructedBy));
         out.add("Deconstructed by: " + griefWarnings.formatPlayer(info.deconstructedBy));
@@ -127,15 +127,20 @@ public class CommandHandler {
             }
         } else out.add("No interaction information recorded");
         if (info.lastRotatedBy != null) out.add("Last rotated by: " + griefWarnings.formatPlayer(info.lastRotatedBy));
-        return String.join("\n", out);
+        return out;
     }
 
     /** Get stored information for the tile under the cursor */
     public void tileInfo(Context ctx) {
         Vector2 vec = Core.input.mouseWorld(Core.input.mouseX(), Core.input.mouseY());
         Tile tile = world.tile(world.toTile(vec.x), world.toTile(vec.y));
-        reply("====================");
-        reply(tileInfo(tile));
+        Array<String> out = tileInfo(tile);
+        if (ctx.args.contains("send")) {
+            for (String line : out) griefWarnings.sendMessage(line, false);
+        } else {
+            reply("====================");
+            reply(String.join("\n", out));
+        }
     }
 
     /** Get list of all players and their ids */

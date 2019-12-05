@@ -268,6 +268,7 @@ public class NetClient implements ApplicationListener{
 
         // don't delete warnings from chat if new map loads
         // ui.chatfrag.clearMessages();
+        ui.chatfrag.addMessage("========== new map loaded ==========", null);
         net.setClientLoaded(false);
 
         ui.loadfrag.show("$connecting.data");

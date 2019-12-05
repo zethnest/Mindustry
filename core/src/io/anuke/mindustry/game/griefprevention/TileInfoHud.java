@@ -25,6 +25,6 @@ public class TileInfoHud extends Table {
         Tile tile = world.tile(world.toTile(vec.x), world.toTile(vec.y));
         if (tile == lastTile) return lastOutput;
         if (tile == null) return lastOutput = "No data";
-        return lastOutput = griefWarnings.commandHandler.tileInfo(tile);
+        return lastOutput = String.join("\n", griefWarnings.commandHandler.tileInfo(tile));
     }
 }
