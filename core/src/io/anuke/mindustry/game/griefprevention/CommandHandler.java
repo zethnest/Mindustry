@@ -102,7 +102,7 @@ public class CommandHandler {
     }
 
     public Array<String> tileInfo(Tile tile) {
-        TileInfo info = griefWarnings.getTileInfo(tile);
+        TileInfo info = griefWarnings.tileInfo.get(tile);
         Array<String> out = new Array<>();
         out.add("Tile at " + griefWarnings.formatTile(tile));
         Block currentBlock = tile.block();
@@ -116,9 +116,11 @@ public class CommandHandler {
             out.add("[yellow]No information");
             return out;
         }
+        Block previousBlock = info.previousBlock;
+        if (info.link != null) info = info.link;
         out.add("Constructed by: " + griefWarnings.formatPlayer(info.constructedBy));
         out.add("Deconstructed by: " + griefWarnings.formatPlayer(info.deconstructedBy));
-        if (info.previousBlock != null) out.add("Block that was here: " + info.previousBlock.name);
+        if (previousBlock != null) out.add("Block that was here: " + previousBlock.name);
         out.add("Configured [accent]" + info.configureCount + "[] times");
         if (info.interactedPlayers.size > 0) {
             out.add("Players who have interacted with this block:");

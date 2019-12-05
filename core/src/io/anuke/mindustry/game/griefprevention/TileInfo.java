@@ -38,7 +38,6 @@ public class TileInfo implements Cloneable {
     }
 
     public void doLink(TileInfo primary) {
-        previousBlock = currentBlock;
         reset();
         constructedBy = null;
         link = primary;
@@ -46,6 +45,7 @@ public class TileInfo implements Cloneable {
 
     public void unlink() {
         if (link == null) return;
+        // this is called after previousBlock is set on primary
         previousBlock = link.previousBlock;
         constructedBy = link.constructedBy;
         deconstructedBy = link.deconstructedBy;
