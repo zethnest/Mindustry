@@ -73,7 +73,7 @@ android{
         Integer vcode = props['androidBuildCode']?.toInteger() ?: 1
         def versionNameResult = "$versionNumber-$versionType-${getBuildVersion().replace(" ", "-")}"
 
-        applicationId "io.anuke.mindustry"
+        applicationId "io.anuke.mindustry.antigrief"
         minSdkVersion 14
         targetSdkVersion 29
         
@@ -160,5 +160,5 @@ task run(type: Exec){
     }
 
     def adb = path + "/platform-tools/adb"
-    commandLine "$adb", 'shell', 'am', 'start', '-n', 'io.anuke.mindustry/io.anuke.mindustry.AndroidLauncher'
+    commandLine "$adb", 'shell', 'am', 'start', '-n', 'io.anuke.mindustry.antigrief/io.anuke.mindustry.AndroidLauncher'
 }
