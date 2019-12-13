@@ -62,7 +62,7 @@ public class MessageBlock extends Block{
             }
         }
 
-        MessageBlockEntity entity = tile.entity();
+        MessageBlockEntity entity = tile.ent();
         if(entity != null){
             entity.message = result.toString();
             entity.lines = entity.message.split("\n");
@@ -71,7 +71,7 @@ public class MessageBlock extends Block{
 
     @Override
     public void drawSelect(Tile tile){
-        MessageBlockEntity entity = tile.entity();
+        MessageBlockEntity entity = tile.ent();
         BitmapFont font = Fonts.outline;
         GlyphLayout l = Pools.obtain(GlyphLayout.class, GlyphLayout::new);
         boolean ints = font.usesIntegerPositions();
@@ -96,8 +96,8 @@ public class MessageBlock extends Block{
     }
 
     @Override
-    public void buildTable(Tile tile, Table table){
-        MessageBlockEntity entity = tile.entity();
+    public void buildConfiguration(Tile tile, Table table){
+        MessageBlockEntity entity = tile.ent();
 
         table.addImageButton(Icon.pencilSmall, () -> {
             if(mobile){
@@ -148,8 +148,8 @@ public class MessageBlock extends Block{
     }
 
     public class MessageBlockEntity extends TileEntity{
-        protected String message = "";
-        protected String[] lines = {""};
+        public String message = "";
+        public String[] lines = {""};
 
         @Override
         public void write(DataOutput stream) throws IOException{
