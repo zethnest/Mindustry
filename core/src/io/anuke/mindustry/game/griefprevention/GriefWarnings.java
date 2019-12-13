@@ -51,6 +51,7 @@ public class GriefWarnings {
 
     public CommandHandler commandHandler = new CommandHandler();
     public FixGrief fixer = new FixGrief();
+    public Auto auto;
 
     public GriefWarnings() {
         Events.on(DepositEvent.class, this::handleDeposit);
@@ -367,14 +368,14 @@ public class GriefWarnings {
 
         Block block = tile.block();
         if (block instanceof Sorter) {
-            Item oldItem = tile.<Sorter.SorterEntity>entity().sortItem;
+            Item oldItem = tile.<Sorter.SorterEntity>ent().sortItem;
             Item newItem = content.item(value);
             if (verbose) {
                 sendMessage("[green]Verbose[] " + formatPlayer(targetPlayer) + " configures sorter " +
                     formatItem(oldItem) + " -> " + formatItem(newItem) + " " + formatTile(tile));
             }
         } else if (block instanceof MassDriver) {
-            Tile oldLink = world.tile(tile.<MassDriver.MassDriverEntity>entity().link);
+            Tile oldLink = world.tile(tile.<MassDriver.MassDriverEntity>ent().link);
             Tile newLink = world.tile(value);
             if (verbose) {
                 sendMessage("[green]Verbose[] " + formatPlayer(targetPlayer) + " configures mass driver at " +
@@ -431,5 +432,9 @@ public class GriefWarnings {
         if (targetPlayer == null) return;
         TileInfo info = getOrCreateTileInfo(tile);
         info.logInteraction(targetPlayer);
+    }
+
+    public void loadComplete() {
+        auto = new Auto();
     }
 }

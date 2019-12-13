@@ -194,6 +194,7 @@ public class DesktopLauncher extends ClientLauncher{
 
         boolean fbgp = badGPU;
 
+        System.err.println(e);
         CrashSender.send(e, file -> {
             Array<Throwable> causes = Strings.getCauses(e);
             Throwable fc = causes.find(t -> t instanceof ModLoadException);

@@ -201,6 +201,8 @@ public class Control implements ApplicationListener, Loadable{
         createPlayer();
 
         saves.load();
+
+        griefWarnings.loadComplete();
     }
 
     void createPlayer(){

@@ -10,6 +10,7 @@ import io.anuke.mindustry.game.Team;
 import io.anuke.mindustry.game.Teams.BrokenBlock;
 import io.anuke.mindustry.game.Teams.TeamData;
 import io.anuke.mindustry.gen.Call;
+import io.anuke.mindustry.net.Packets.AdminAction;
 import io.anuke.mindustry.world.Block;
 import io.anuke.mindustry.world.Build;
 import io.anuke.mindustry.world.Tile;
@@ -17,6 +18,7 @@ import io.anuke.mindustry.world.blocks.BlockPart;
 
 import static io.anuke.mindustry.Vars.*;
 
+import java.text.NumberFormat;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -48,6 +50,8 @@ public class CommandHandler {
         addCommand("tileinfohud", createToggle("tileinfohud", "tile information hud", v -> griefWarnings.tileInfoHud = v));
         addCommand("autoban", createToggle("autoban", "automatic bans", v -> griefWarnings.autoban = v));
         addCommand("rebuild", this::rebuild);
+        addCommand("auto", this::auto);
+        addCommand("nextwave", this::nextwave);
     }
 
     public void addCommand(String name, Cons<Context> handler) {
@@ -159,16 +163,27 @@ public class CommandHandler {
         reply(response.toString());
     }
 
-    /** Votekick overlay to allow /votekick using ids when prefixed by # */
-    public void votekick(Context ctx) {
-        String name = String.join(" ", ctx.args.subList(1, ctx.args.size())).toLowerCase();
+    /** Get player by either id or full name */
+    public Player getPlayer(String name) {
         Player target;
         if (name.startsWith("#")) {
-            int id = Integer.parseInt(name.substring(1));
+            int id;
+            try {
+                id = Integer.parseInt(name.substring(1));
+            } catch (NumberFormatException ex) {
+                id = -1;
+            }
             target = playerGroup.getByID(id);
         } else {
             target = playerGroup.find(p -> p.name.toLowerCase().equals(name));
         }
+        return target;
+    }
+
+    /** Votekick overlay to allow /votekick using ids when prefixed by # */
+    public void votekick(Context ctx) {
+        String name = String.join(" ", ctx.args.subList(1, ctx.args.size())).toLowerCase();
+        Player target = getPlayer(name);
         if (target == null) {
             reply("[scarlet]Player not found!");
             return;
@@ -193,5 +208,125 @@ public class CommandHandler {
             }
         }
         reply("Added rebuild to build queue");
+    }
+
+    /** Control the auto mode */
+    public void auto(Context ctx) {
+        if (ctx.args.size() < 2) {
+            reply("[scarlet]Not enough arguments");
+            reply("Usage: auto <on|off|cancel|gotocore|gotoplayer|goto|distance>");
+            return;
+        }
+        Auto auto = griefWarnings.auto;
+        switch (ctx.args.get(1).toLowerCase()) {
+            case "on":
+                auto.enabled = true;
+                reply("enabled auto mode");
+                break;
+            case "off":
+                auto.enabled = false;
+                reply("disabled auto mode");
+                break;
+            case "gotocore":
+                Tile core = player.getClosestCore().getTile();
+                auto.gotoTile(core, 50f);
+                reply("going to tile " + griefWarnings.formatTile(core));
+                break;
+            case "goto":
+                if (ctx.args.size() < 4) {
+                    reply("[scarlet]Not enough arguments");
+                    reply("Usage: auto goto <x> <y>");
+                    return;
+                }
+                int x;
+                int y;
+                try {
+                    x = Integer.parseInt(ctx.args.get(2));
+                    y = Integer.parseInt(ctx.args.get(3));
+                } catch (NumberFormatException ex) {
+                    reply("[scarlet]Invalid integer provided");
+                    return;
+                }
+                Tile tile = world.tile(x, y);
+                auto.gotoTile(tile, 50f);
+                reply("going to tile " + griefWarnings.formatTile(tile));
+                break;
+            case "gotoplayer":
+                if (ctx.args.size() < 3) {
+                    reply("[scarlet]Not enough arguments");
+                    reply("Usage: auto gotoplayer [follow|assist|undo] <player>");
+                    return;
+                }
+                int nameStart = 2;
+                boolean follow = false;
+                boolean assist = false;
+                boolean undo = false;
+                String additional = ctx.args.get(nameStart).toLowerCase();
+                switch (additional) {
+                    case "follow":
+                        nameStart++;
+                        follow = true;
+                        break;
+                    case "assist":
+                        nameStart++;
+                        assist = true;
+                        break;
+                    case "undo":
+                        nameStart++;
+                        undo = true;
+                        break;
+                }
+                String name = String.join(" ", ctx.args.subList(nameStart, ctx.args.size())).toLowerCase();
+                Player target = getPlayer(name);
+                if (target == null) {
+                    reply("[scarlet]No such player");
+                    return;
+                }
+                if (assist) auto.assistEntity(target, 100f);
+                else if (undo) auto.undoEntity(target, 100f);
+                else auto.gotoEntity(target, 100f, follow);
+                reply("going to player: " + griefWarnings.formatPlayer(target));
+                break;
+            case "cancel":
+                auto.cancel();
+                reply("cancelled");
+                break;
+            case "distance":
+                if (ctx.args.size() < 3) {
+                    reply("[scarlet]Not enough arguments");
+                    reply("Usage: auto distance <distance>");
+                    return;
+                }
+                float distance;
+                try {
+                    distance = Float.parseFloat(ctx.args.get(2));
+                } catch (NumberFormatException ex) {
+                    reply("[scarlet]Invalid number");
+                    return;
+                }
+                auto.targetDistance = distance;
+                reply("set target distance to " + distance);
+                break;
+            default:
+                reply("unknown subcommand");
+        }
+    }
+
+    public void nextwave(Context ctx) {
+        if (!player.isAdmin) {
+            reply("not admin!");
+            return;
+        }
+        int count = 1;
+        if (ctx.args.size() > 1) {
+            try {
+                count = Integer.parseInt(ctx.args.get(1));
+            } catch (NumberFormatException ex) {
+                reply("invalid number");
+                return;
+            }
+        }
+        for (int i = 0; i < count; i++) Call.onAdminRequest(player, AdminAction.wave);
+        reply("done");
     }
 }
