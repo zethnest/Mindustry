@@ -63,6 +63,7 @@ public class Auto {
         } catch (NoSuchFieldException | IllegalAccessException ex) {
             throw new RuntimeException("reflective access failed on SolidEntity.velocity");
         }
+
         try {
             Class<ItemSourceEntity> itemSourceEntityClass = ItemSourceEntity.class;
             itemSourceEntityOutputItemField = itemSourceEntityClass.getDeclaredField("outputItem");
@@ -105,6 +106,10 @@ public class Auto {
     }
 
     public boolean manageItemSource(Tile tile) {
+        if (tile == null) {
+            targetItemSource = null;
+            return true;
+        }
         if (tile.block() != Blocks.itemSource) return false;
         targetItemSource = tile;
         return true;

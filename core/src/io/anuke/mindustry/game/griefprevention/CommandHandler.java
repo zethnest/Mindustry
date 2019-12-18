@@ -318,16 +318,22 @@ public class CommandHandler {
                 reply("set target distance to " + distance);
                 break;
             case "itemsource": {
+                if (ctx.args.size() == 3) {
+                    if (ctx.args.get(2).toLowerCase().equals("cancel")) {
+                        auto.manageItemSource(null);
+                        reply("cancelled automatic item source configuration");
+                        return;
+                    }
+                }
                 Tile tile = getCursorTile();
                 if (tile == null) {
                     reply("cursor is not on a tile");
                     return;
                 }
-                if (tile.block() != Blocks.itemSource) {
+                if (!auto.manageItemSource(tile)) {
                     reply("target tile is not an item source");
                     return;
                 }
-                auto.manageItemSource(tile);
                 reply("automatically configuring item source " + griefWarnings.formatTile(tile));
                 break;
             }
