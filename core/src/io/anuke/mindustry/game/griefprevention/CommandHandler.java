@@ -4,6 +4,7 @@ import io.anuke.arc.Core;
 import io.anuke.arc.collection.Array;
 import io.anuke.arc.func.Cons;
 import io.anuke.arc.math.geom.Vector2;
+import io.anuke.mindustry.content.Blocks;
 import io.anuke.mindustry.entities.traits.BuilderTrait.BuildRequest;
 import io.anuke.mindustry.entities.type.Player;
 import io.anuke.mindustry.game.Team;
@@ -18,7 +19,6 @@ import io.anuke.mindustry.world.blocks.BlockPart;
 
 import static io.anuke.mindustry.Vars.*;
 
-import java.text.NumberFormat;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -127,9 +127,10 @@ public class CommandHandler {
             return out;
         }
         Block previousBlock = info.previousBlock;
+        Player deconstructedBy = info.deconstructedBy;
         if (info.link != null) info = info.link;
         out.add("Constructed by: " + griefWarnings.formatPlayer(info.constructedBy));
-        out.add("Deconstructed by: " + griefWarnings.formatPlayer(info.deconstructedBy));
+        out.add("Deconstructed by: " + griefWarnings.formatPlayer(deconstructedBy));
         if (previousBlock != null) out.add("Block that was here: " + previousBlock.name);
         out.add("Configured [accent]" + info.configureCount + "[] times");
         if (info.interactedPlayers.size > 0) {
@@ -145,8 +146,11 @@ public class CommandHandler {
 
     /** Get stored information for the tile under the cursor */
     public void tileInfo(Context ctx) {
-        Vector2 vec = Core.input.mouseWorld(Core.input.mouseX(), Core.input.mouseY());
-        Tile tile = world.tile(world.toTile(vec.x), world.toTile(vec.y));
+        Tile tile = getCursorTile();
+        if (tile == null) {
+            reply("cursor is not on a tile");
+            return;
+        }
         Array<String> out = tileInfo(tile);
         if (ctx.args.contains("send")) {
             for (String line : out) griefWarnings.sendMessage(line, false);
@@ -154,6 +158,11 @@ public class CommandHandler {
             reply("====================");
             reply(String.join("\n", out));
         }
+    }
+
+    public Tile getCursorTile() {
+        Vector2 vec = Core.input.mouseWorld(Core.input.mouseX(), Core.input.mouseY());
+        return world.tile(world.toTile(vec.x), world.toTile(vec.y));
     }
 
     /** Get list of all players and their ids */
@@ -214,7 +223,7 @@ public class CommandHandler {
     public void auto(Context ctx) {
         if (ctx.args.size() < 2) {
             reply("[scarlet]Not enough arguments");
-            reply("Usage: auto <on|off|cancel|gotocore|gotoplayer|goto|distance>");
+            reply("Usage: auto <on|off|cancel|gotocore|gotoplayer|goto|distance|itemsource>");
             return;
         }
         Auto auto = griefWarnings.auto;
@@ -232,7 +241,7 @@ public class CommandHandler {
                 auto.gotoTile(core, 50f);
                 reply("going to tile " + griefWarnings.formatTile(core));
                 break;
-            case "goto":
+            case "goto": {
                 if (ctx.args.size() < 4) {
                     reply("[scarlet]Not enough arguments");
                     reply("Usage: auto goto <x> <y>");
@@ -251,6 +260,7 @@ public class CommandHandler {
                 auto.gotoTile(tile, 50f);
                 reply("going to tile " + griefWarnings.formatTile(tile));
                 break;
+            }
             case "gotoplayer":
                 if (ctx.args.size() < 3) {
                     reply("[scarlet]Not enough arguments");
@@ -288,7 +298,7 @@ public class CommandHandler {
                 reply("going to player: " + griefWarnings.formatPlayer(target));
                 break;
             case "cancel":
-                auto.cancel();
+                auto.cancelMovement();
                 reply("cancelled");
                 break;
             case "distance":
@@ -307,6 +317,41 @@ public class CommandHandler {
                 auto.targetDistance = distance;
                 reply("set target distance to " + distance);
                 break;
+            case "itemsource": {
+                Tile tile = getCursorTile();
+                if (tile == null) {
+                    reply("cursor is not on a tile");
+                    return;
+                }
+                if (tile.block() != Blocks.itemSource) {
+                    reply("target tile is not an item source");
+                    return;
+                }
+                auto.manageItemSource(tile);
+                reply("automatically configuring item source " + griefWarnings.formatTile(tile));
+                break;
+            }
+            case "dumptarget": {
+                if (ctx.args.size() == 3) {
+                    if (ctx.args.get(2).toLowerCase().equals("reset")) {
+                        auto.setAutoDumpTransferTarget(null);
+                        reply("reset autodump target");
+                        return;
+                    }
+                }
+                Tile tile = getCursorTile();
+                if (tile == null) {
+                    reply("cursor is not on a tile");
+                    return;
+                }
+                if (tile.isLinked()) tile = tile.link();
+                if (!auto.setAutoDumpTransferTarget(tile)) {
+                    reply("target does not seem valid");
+                    return;
+                }
+                reply("automatically dumping player inventory to tile " + griefWarnings.formatTile(tile));
+                break;
+            }
             default:
                 reply("unknown subcommand");
         }

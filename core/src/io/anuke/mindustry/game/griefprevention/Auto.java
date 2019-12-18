@@ -4,12 +4,20 @@ import io.anuke.arc.collection.Queue;
 import io.anuke.arc.math.Mathf;
 import io.anuke.arc.math.geom.Vector2;
 import io.anuke.arc.util.Time;
+import io.anuke.mindustry.content.Blocks;
 import io.anuke.mindustry.entities.traits.BuilderTrait;
 import io.anuke.mindustry.entities.traits.BuilderTrait.BuildRequest;
 import io.anuke.mindustry.entities.type.Player;
 import io.anuke.mindustry.entities.type.SolidEntity;
+import io.anuke.mindustry.entities.type.TileEntity;
 import io.anuke.mindustry.entities.type.Unit;
+import io.anuke.mindustry.gen.Call;
+import io.anuke.mindustry.type.Item;
+import io.anuke.mindustry.type.ItemStack;
+import io.anuke.mindustry.type.ItemType;
 import io.anuke.mindustry.world.Tile;
+import io.anuke.mindustry.world.blocks.sandbox.ItemSource.ItemSourceEntity;
+import io.anuke.mindustry.world.modules.ItemModule;
 
 import java.lang.reflect.Field;
 
@@ -22,7 +30,7 @@ public class Auto {
     }
 
     public boolean enabled = true;
-    public boolean active = false;
+    public boolean movementActive = false;
     public Mode mode;
     public boolean persist = false;
     public float targetDistance = 0.0f;
@@ -30,9 +38,13 @@ public class Auto {
     public Tile targetTile;
     public Unit targetEntity;
     public BuilderTrait targetBuildEntity;
+    public Tile targetItemSource;
+    public Tile autoDumpTarget;
 
     public Vector2 movement;
     public Vector2 velocity;
+
+    public Field itemSourceEntityOutputItemField;
 
     public Auto() {
         try {
@@ -51,10 +63,17 @@ public class Auto {
         } catch (NoSuchFieldException | IllegalAccessException ex) {
             throw new RuntimeException("reflective access failed on SolidEntity.velocity");
         }
+        try {
+            Class<ItemSourceEntity> itemSourceEntityClass = ItemSourceEntity.class;
+            itemSourceEntityOutputItemField = itemSourceEntityClass.getDeclaredField("outputItem");
+            itemSourceEntityOutputItemField.setAccessible(true);
+        } catch (NoSuchFieldException ex) {
+            throw new RuntimeException("reflective access failed on ItemSourceEntity.outputItem");
+        }
     }
 
     public void gotoTile(Tile tile, float distance) {
-        active = true;
+        movementActive = true;
         mode = Mode.GotoTile;
         targetTile = tile;
         targetDistance = distance;
@@ -62,7 +81,7 @@ public class Auto {
     }
 
     public void gotoEntity(Unit unit, float distance, boolean follow) {
-        active = true;
+        movementActive = true;
         mode = Mode.GotoEntity;
         targetEntity = unit;
         targetDistance = distance;
@@ -70,7 +89,7 @@ public class Auto {
     }
 
     public void assistEntity(BuilderTrait unit, float distance) {
-        active = true;
+        movementActive = true;
         mode = Mode.AssistEntity;
         targetBuildEntity = unit;
         targetDistance = distance;
@@ -78,15 +97,87 @@ public class Auto {
     }
 
     public void undoEntity(BuilderTrait unit, float distance) {
-        active = true;
+        movementActive = true;
         mode = Mode.UndoEntity;
         targetBuildEntity = unit;
         targetDistance = distance;
         persist = true;
     }
 
+    public boolean manageItemSource(Tile tile) {
+        if (tile.block() != Blocks.itemSource) return false;
+        targetItemSource = tile;
+        return true;
+    }
+
+    public boolean setAutoDumpTransferTarget(Tile tile) {
+        if (tile == null) {
+            autoDumpTarget = null;
+            return true;
+        }
+        if (!tile.block().hasItems || !tile.interactable(player.getTeam())) return false;
+        autoDumpTarget = tile;
+        return true;
+    }
+
     public void update() {
-        if (!enabled || !active) return;
+        if (!enabled) return;
+
+        updateItemSourceTracking();
+        updateAutoDump();
+        updateMovement();
+    }
+
+    public void updateAutoDump() {
+        Tile tile = autoDumpTarget;
+        if (tile == null || !tile.block().hasItems || !tile.interactable(player.getTeam())) {
+            // tile doesn't accept items, reset the thing
+            autoDumpTarget = null;
+            return;
+        }
+        ItemStack stack = player.item();
+        // add 10 to timer to not spam
+        if (player.timer == null || !player.timer.check(Player.timerTransfer, 50)) return;
+        if (stack.amount > 0 &&
+                tile.block().acceptStack(stack.item, stack.amount, tile, player) > 0 &&
+                !player.isTransferring) {
+            Call.transferInventory(player, tile);
+        }
+    }
+
+    public void updateItemSourceTracking() {
+        if (targetItemSource == null) return;
+        if (targetItemSource.block() != Blocks.itemSource) {
+            targetItemSource = null;
+            return;
+        }
+        TileEntity core = player.getClosestCore();
+        if (core == null) return;
+        ItemModule items = core.items;
+
+        Item least = null;
+        int count = Integer.MAX_VALUE;
+        for (int i = 0; i < content.items().size; i++) {
+            Item currentItem = content.item(i);
+            if (currentItem.type != ItemType.material) continue;
+            int currentCount = items.get(currentItem);
+            if (currentCount < count) {
+                least = currentItem;
+                count = currentCount;
+            }
+        }
+        ItemSourceEntity entity = targetItemSource.ent();
+        Item currentConfigured;
+        try {
+            currentConfigured = (Item)itemSourceEntityOutputItemField.get(entity);
+        } catch (IllegalAccessException ex) {
+            throw new RuntimeException("reflective access failed on ItemSourceEntity.outputItem");
+        }
+        if (least != null && least != currentConfigured) targetItemSource.configure(least.id);
+    }
+
+    public void updateMovement() {
+        if (!movementActive) return;
         float speed = !player.mech.flying
                 ? player.mech.boostSpeed
                 : player.mech.speed;
@@ -96,7 +187,7 @@ public class Auto {
         switch (mode) {
             case GotoTile:
                 if (targetTile == null) {
-                    active = false;
+                    movementActive = false;
                     return;
                 }
                 targetX = targetTile.getX();
@@ -104,7 +195,7 @@ public class Auto {
                 break;
             case GotoEntity:
                 if (targetEntity == null) {
-                    active = false;
+                    movementActive = false;
                     return;
                 }
                 targetX = targetEntity.x;
@@ -113,7 +204,7 @@ public class Auto {
             case AssistEntity:
             case UndoEntity:
                 if (targetBuildEntity == null) {
-                    active = false;
+                    movementActive = false;
                     return;
                 }
                 targetX = ((Unit) targetBuildEntity).x;
@@ -127,7 +218,7 @@ public class Auto {
             movement.setZero();
             if (!persist) {
                 player.isBoosting = false;
-                cancel();
+                cancelMovement();
             }
         } else {
             player.isBoosting = true;
@@ -170,8 +261,8 @@ public class Auto {
     }
 
     /** Perform necessary cleanup after stopping */
-    public void cancel() {
-        active = false;
+    public void cancelMovement() {
+        movementActive = false;
         persist = false;
         targetTile = null;
         targetEntity = null;

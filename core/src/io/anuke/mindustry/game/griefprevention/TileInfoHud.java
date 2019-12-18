@@ -21,8 +21,7 @@ public class TileInfoHud extends Table {
     }
 
     public String hudInfo() {
-        Vector2 vec = Core.input.mouseWorld(Core.input.mouseX(), Core.input.mouseY());
-        Tile tile = world.tile(world.toTile(vec.x), world.toTile(vec.y));
+        Tile tile = griefWarnings.commandHandler.getCursorTile();
         if (tile == lastTile) return lastOutput;
         if (tile == null) return lastOutput = "No data";
         return lastOutput = String.join("\n", griefWarnings.commandHandler.tileInfo(tile));
