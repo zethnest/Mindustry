@@ -598,9 +598,11 @@ public class Player extends Unit implements BuilderMinerTrait, ShooterTrait{
             movement.y += Mathf.clamp((Core.input.mouseY() - Core.graphics.getHeight() / 2) * 0.005f, -1, 1) * speed;
         }
 
-        Vector2 vec = Core.input.mouseWorld(control.input.getMouseX(), control.input.getMouseY());
-        pointerX = vec.x;
-        pointerY = vec.y;
+        if (!griefWarnings.auto.shootControlled) {
+            Vector2 vec = Core.input.mouseWorld(control.input.getMouseX(), control.input.getMouseY());
+            pointerX = vec.x;
+            pointerY = vec.y;
+        }
         updateShooting();
 
         movement.limit(speed).scl(Time.delta());
@@ -620,7 +622,7 @@ public class Player extends Unit implements BuilderMinerTrait, ShooterTrait{
                 if(!movement.isZero()){
                     rotation = Mathf.slerpDelta(rotation, mech.flying ? velocity.angle() : movement.angle(), 0.13f * baseLerp);
                 }
-            }else{
+            }else if (!griefWarnings.auto.shootControlled){
                 float angle = control.input.mouseAngle(x, y);
                 this.rotation = Mathf.slerpDelta(this.rotation, angle, 0.1f * baseLerp);
             }
@@ -648,69 +650,71 @@ public class Player extends Unit implements BuilderMinerTrait, ShooterTrait{
             target = null;
         }
 
-        float targetX = Core.camera.position.x, targetY = Core.camera.position.y;
-        float attractDst = 15f;
-        float speed = isBoosting && !mech.flying ? mech.boostSpeed : mech.speed;
+        if (!griefWarnings.auto.movementControlled) {
+            float targetX = Core.camera.position.x, targetY = Core.camera.position.y;
+            float attractDst = 15f;
+            float speed = isBoosting && !mech.flying ? mech.boostSpeed : mech.speed;
 
-        if(moveTarget != null && !moveTarget.isDead()){
-            targetX = moveTarget.getX();
-            targetY = moveTarget.getY();
-            boolean tapping = moveTarget instanceof TileEntity && moveTarget.getTeam() == team;
-            attractDst = 0f;
+            if(moveTarget != null && !moveTarget.isDead()){
+                targetX = moveTarget.getX();
+                targetY = moveTarget.getY();
+                boolean tapping = moveTarget instanceof TileEntity && moveTarget.getTeam() == team;
+                attractDst = 0f;
 
-            if(tapping){
-                velocity.setAngle(angleTo(moveTarget));
-            }
-
-            if(dst(moveTarget) <= 2f * Time.delta()){
-                if(tapping && !isDead()){
-                    Tile tile = ((TileEntity)moveTarget).tile;
-                    tile.block().tapped(tile, this);
+                if(tapping){
+                    velocity.setAngle(angleTo(moveTarget));
                 }
 
+                if(dst(moveTarget) <= 2f * Time.delta()){
+                    if(tapping && !isDead()){
+                        Tile tile = ((TileEntity)moveTarget).tile;
+                        tile.block().tapped(tile, this);
+                    }
+
+                    moveTarget = null;
+                }
+            }else{
                 moveTarget = null;
             }
-        }else{
-            moveTarget = null;
-        }
 
-        movement.set((targetX - x) / Time.delta(), (targetY - y) / Time.delta()).limit(speed);
-        movement.setAngle(Mathf.slerp(movement.angle(), velocity.angle(), 0.05f));
+            movement.set((targetX - x) / Time.delta(), (targetY - y) / Time.delta()).limit(speed);
+            movement.setAngle(Mathf.slerp(movement.angle(), velocity.angle(), 0.05f));
 
-        if(dst(targetX, targetY) < attractDst){
-            movement.setZero();
-        }
+            if(dst(targetX, targetY) < attractDst){
+                movement.setZero();
+            }
 
-        float expansion = 3f;
+            float expansion = 3f;
 
-        hitbox(rect);
-        rect.x -= expansion;
-        rect.y -= expansion;
-        rect.width += expansion * 2f;
-        rect.height += expansion * 2f;
+            hitbox(rect);
+            rect.x -= expansion;
+            rect.y -= expansion;
+            rect.width += expansion * 2f;
+            rect.height += expansion * 2f;
 
-        isBoosting = collisions.overlapsTile(rect) || dst(targetX, targetY) > 85f;
+            isBoosting = collisions.overlapsTile(rect) || dst(targetX, targetY) > 85f;
 
-        velocity.add(movement.scl(Time.delta()));
+            velocity.add(movement.scl(Time.delta()));
 
-        if(velocity.len() <= 0.2f && mech.flying){
-            rotation += Mathf.sin(Time.time() + id * 99, 10f, 1f);
-        }else if(target == null){
-            rotation = Mathf.slerpDelta(rotation, velocity.angle(), velocity.len() / 10f);
-        }
+            if(velocity.len() <= 0.2f && mech.flying){
+                rotation += Mathf.sin(Time.time() + id * 99, 10f, 1f);
+            }else if(target == null){
+                rotation = Mathf.slerpDelta(rotation, velocity.angle(), velocity.len() / 10f);
+            }
 
-        float lx = x, ly = y;
-        updateVelocityStatus();
-        moved = dst(lx, ly) > 0.001f;
+            float lx = x, ly = y;
+            updateVelocityStatus();
+            moved = dst(lx, ly) > 0.001f;
 
-        if(mech.flying){
-            //hovering effect
-            x += Mathf.sin(Time.time() + id * 999, 25f, 0.08f);
-            y += Mathf.cos(Time.time() + id * 999, 25f, 0.08f);
+            if(mech.flying){
+                //hovering effect
+                x += Mathf.sin(Time.time() + id * 999, 25f, 0.08f);
+                y += Mathf.cos(Time.time() + id * 999, 25f, 0.08f);
+            }
         }
 
         //update shooting if not building, not mining and there's ammo left
-        if(!isBuilding() && getMineTile() == null){
+        if(!isBuilding() && getMineTile() == null && !griefWarnings.auto.shootControlled){
 
             //autofire
             if(target == null){

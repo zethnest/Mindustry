@@ -1,6 +1,7 @@
 package io.anuke.mindustry.game.griefprevention;
 
 import io.anuke.arc.collection.Queue;
+import io.anuke.arc.math.Angles;
 import io.anuke.arc.math.Mathf;
 import io.anuke.arc.math.geom.Vector2;
 import io.anuke.arc.util.Time;
@@ -37,12 +38,18 @@ public class Auto {
 
     public Tile targetTile;
     public Unit targetEntity;
-    public BuilderTrait targetBuildEntity;
     public Tile targetItemSource;
     public Tile autoDumpTarget;
 
+    public float targetEntityLastRotation;
+
     public Vector2 movement;
     public Vector2 velocity;
+
+    public boolean movementControlled = false;
+    public boolean shootControlled = false;
+
+    public boolean wasAutoShooting = false;
 
     public Field itemSourceEntityOutputItemField;
 
@@ -89,18 +96,18 @@ public class Auto {
         persist = follow;
     }
 
-    public void assistEntity(BuilderTrait unit, float distance) {
+    public void assistEntity(Unit unit, float distance) {
         movementActive = true;
         mode = Mode.AssistEntity;
-        targetBuildEntity = unit;
+        targetEntity = unit;
         targetDistance = distance;
         persist = true;
     }
 
-    public void undoEntity(BuilderTrait unit, float distance) {
+    public void undoEntity(Unit unit, float distance) {
         movementActive = true;
         mode = Mode.UndoEntity;
-        targetBuildEntity = unit;
+        targetEntity = unit;
         targetDistance = distance;
         persist = true;
     }
@@ -199,6 +206,8 @@ public class Auto {
                 targetY = targetTile.getY();
                 break;
             case GotoEntity:
+            case AssistEntity:
+            case UndoEntity:
                 if (targetEntity == null) {
                     movementActive = false;
                     return;
@@ -206,19 +215,11 @@ public class Auto {
                 targetX = targetEntity.x;
                 targetY = targetEntity.y;
                 break;
-            case AssistEntity:
-            case UndoEntity:
-                if (targetBuildEntity == null) {
-                    movementActive = false;
-                    return;
-                }
-                targetX = ((Unit) targetBuildEntity).x;
-                targetY = ((Unit) targetBuildEntity).y;
-                break;
             default:
                 throw new RuntimeException("invalid mode");
         }
 
+        movementControlled = false;
         if (player.dst(targetX, targetY) < targetDistance) {
             movement.setZero();
             if (!persist) {
@@ -233,6 +234,59 @@ public class Auto {
             ).limit(speed);
             movement.setAngle(Mathf.slerp(movement.angle(), velocity.angle(), 0.05f));
             velocity.add(movement.scl(Time.delta()));
+            movementControlled = true;
+        }
+
+        shootControlled = false;
+        if (mode == Mode.AssistEntity) {
+            boolean shouldContinue = true;
+            if (targetEntity instanceof Player && shouldContinue) {
+                Player targetPlayer = (Player)targetEntity;
+                // crappy is shooting logic
+                if (!targetPlayer.getTimer().check(targetPlayer.getShootTimer(false), targetPlayer.getWeapon().reload * 1.25f)) {
+                    player.buildQueue().clear();
+                    player.isBuilding = false;
+                    player.isShooting = true;
+                    wasAutoShooting = true;
+                    shootControlled = true;
+
+                    player.rotation = Mathf.slerpDelta(player.rotation, targetEntityLastRotation, 0.1f * player.mech.getRotationAlpha(player));
+                    float rotationDeg = targetEntityLastRotation * Mathf.degreesToRadians;
+                    player.pointerX = player.getX() + 200 * Mathf.cos(rotationDeg);
+                    player.pointerY = player.getY() + 200 * Mathf.sin(rotationDeg);
+                    shouldContinue = false;
+                } else if (wasAutoShooting) {
+                    player.isShooting = false;
+                    wasAutoShooting = false;
+                }
+            }
+            if (targetEntity instanceof BuilderTrait && shouldContinue) {
+                BuilderTrait targetBuildEntity = (BuilderTrait)targetEntity;
+                BuildRequest targetRequest = targetBuildEntity.buildRequest();
+                if (targetRequest != null) {
+                    Queue<BuildRequest> buildQueue = player.buildQueue();
+                    buildQueue.clear();
+                    buildQueue.addFirst(targetRequest);
+                    player.isBuilding = true;
+                    player.isShooting = false;
+                    shouldContinue = false;
+                }
+            }
+        } else if (mode == Mode.UndoEntity) {
+            if (targetEntity instanceof BuilderTrait) {
+                BuilderTrait targetBuildEntity = (BuilderTrait) targetEntity;
+                // TODO: handle configures
+                BuildRequest targetRequest = targetBuildEntity.buildRequest();
+                if (targetRequest != null) {
+                    BuildRequest undo;
+                    if (targetRequest.breaking) {
+                        Tile target = world.tile(targetRequest.x, targetRequest.y);
+                        undo = new BuildRequest(targetRequest.x, targetRequest.y, target.rotation(), target.block());
+                    } else undo = new BuildRequest(targetRequest.x, targetRequest.y);
+                    player.buildQueue().addLast(undo);
+                    player.isBuilding = true;
+                }
+            }
         }
 
         if(velocity.len() <= 0.2f && player.mech.flying){
@@ -241,28 +295,6 @@ public class Auto {
             player.rotation = Mathf.slerpDelta(player.rotation, velocity.angle(), velocity.len() / 10f);
         }
         player.updateVelocityStatus();
-
-        if (mode == Mode.AssistEntity) {
-            BuildRequest targetRequest = targetBuildEntity.buildRequest();
-            if (targetRequest != null) {
-                Queue<BuildRequest> buildQueue = player.buildQueue();
-                buildQueue.clear();
-                buildQueue.addFirst(targetRequest);
-                player.isBuilding = true;
-            }
-        } else if (mode == Mode.UndoEntity) {
-            // TODO: handle configures
-            BuildRequest targetRequest = targetBuildEntity.buildRequest();
-            if (targetRequest != null) {
-                BuildRequest undo;
-                if (targetRequest.breaking) {
-                    Tile target = world.tile(targetRequest.x, targetRequest.y);
-                    undo = new BuildRequest(targetRequest.x, targetRequest.y, target.rotation(), target.block());
-                } else undo = new BuildRequest(targetRequest.x, targetRequest.y);
-                player.buildQueue().addLast(undo);
-                player.isBuilding = true;
-            }
-        }
     }
 
     /** Perform necessary cleanup after stopping */
@@ -271,5 +303,12 @@ public class Auto {
         persist = false;
         targetTile = null;
         targetEntity = null;
+        movementControlled = false;
+        shootControlled = false;
+        wasAutoShooting = false;
+    }
+
+    public void handlePlayerShoot(Player target, float offsetX, float offsetY, float rotation) {
+        if (target == targetEntity) targetEntityLastRotation = rotation;
     }
 }

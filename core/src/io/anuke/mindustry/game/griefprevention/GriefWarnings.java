@@ -398,7 +398,7 @@ public class GriefWarnings {
     }
 
     public void handleThoriumReactorHeat(Tile tile, float heat) {
-        if (heat > 0.15f) {
+        if (heat > 0.15f && tile.interactable(player.getTeam())) {
             sendMessage("[scarlet]WARNING[] Thorium reactor at " + formatTile(tile) + " is overheating! Heat: [accent]" + heat);
         }
     }

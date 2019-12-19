@@ -122,6 +122,7 @@ public class CommandHandler {
         }
         if (currentBlock instanceof BlockPart) currentBlock = tile.link().block();
         out.add("Current block: " + currentBlock.name);
+        out.add("Team: [#" + tile.getTeam().color + "]" + tile.getTeam() + "[]");
         if (info == null) {
             out.add("[yellow]No information");
             return out;
@@ -261,7 +262,7 @@ public class CommandHandler {
                 reply("going to tile " + griefWarnings.formatTile(tile));
                 break;
             }
-            case "gotoplayer":
+            case "gotoplayer": {
                 if (ctx.args.size() < 3) {
                     reply("[scarlet]Not enough arguments");
                     reply("Usage: auto gotoplayer [follow|assist|undo] <player>");
@@ -271,6 +272,7 @@ public class CommandHandler {
                 boolean follow = false;
                 boolean assist = false;
                 boolean undo = false;
+                float distance = 100f;
                 String additional = ctx.args.get(nameStart).toLowerCase();
                 switch (additional) {
                     case "follow":
@@ -280,10 +282,12 @@ public class CommandHandler {
                     case "assist":
                         nameStart++;
                         assist = true;
+                        distance = 50f;
                         break;
                     case "undo":
                         nameStart++;
                         undo = true;
+                        distance = 50f;
                         break;
                 }
                 String name = String.join(" ", ctx.args.subList(nameStart, ctx.args.size())).toLowerCase();
@@ -292,16 +296,18 @@ public class CommandHandler {
                     reply("[scarlet]No such player");
                     return;
                 }
-                if (assist) auto.assistEntity(target, 100f);
-                else if (undo) auto.undoEntity(target, 100f);
-                else auto.gotoEntity(target, 100f, follow);
+                if (assist) auto.assistEntity(target, distance);
+                else if (undo) auto.undoEntity(target, distance);
+                else auto.gotoEntity(target, distance, follow);
                 reply("going to player: " + griefWarnings.formatPlayer(target));
                 break;
-            case "cancel":
+            }
+            case "cancel": {
                 auto.cancelMovement();
                 reply("cancelled");
                 break;
-            case "distance":
+            }
+            case "distance": {
                 if (ctx.args.size() < 3) {
                     reply("[scarlet]Not enough arguments");
                     reply("Usage: auto distance <distance>");
@@ -317,6 +323,7 @@ public class CommandHandler {
                 auto.targetDistance = distance;
                 reply("set target distance to " + distance);
                 break;
+            }
             case "itemsource": {
                 if (ctx.args.size() == 3) {
                     if (ctx.args.get(2).toLowerCase().equals("cancel")) {
