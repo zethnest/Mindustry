@@ -4,6 +4,7 @@ import io.anuke.arc.collection.Queue;
 import io.anuke.arc.math.Angles;
 import io.anuke.arc.math.Mathf;
 import io.anuke.arc.math.geom.Vector2;
+import io.anuke.arc.util.Interval;
 import io.anuke.arc.util.Time;
 import io.anuke.mindustry.content.Blocks;
 import io.anuke.mindustry.entities.traits.BuilderTrait;
@@ -42,6 +43,9 @@ public class Auto {
     public Tile autoDumpTarget;
 
     public float targetEntityLastRotation;
+
+    public Interval timer = new Interval(1);
+    public static final int votekickWaitTimer = 0;
 
     public Vector2 movement;
     public Vector2 velocity;
@@ -310,5 +314,19 @@ public class Auto {
 
     public void handlePlayerShoot(Player target, float offsetX, float offsetY, float rotation) {
         if (target == targetEntity) targetEntityLastRotation = rotation;
+    }
+
+    public boolean interceptMessage(String message, String sender, Player playersender) {
+        // message is annoying
+        if (message.startsWith("[scarlet]You must wait ") && sender == null) {
+            return !timer.get(votekickWaitTimer, 90);
+        }
+        return false;
+    }
+
+    public void votekick(String identifier) {
+        Player p = griefWarnings.commandHandler.getPlayer(identifier);
+        if (p == null) return;
+        Call.sendChatMessage("/votekick " + p.name);
     }
 }

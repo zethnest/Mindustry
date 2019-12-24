@@ -711,6 +711,9 @@ public class Player extends Unit implements BuilderMinerTrait, ShooterTrait{
                 x += Mathf.sin(Time.time() + id * 999, 25f, 0.08f);
                 y += Mathf.cos(Time.time() + id * 999, 25f, 0.08f);
             }
+        } else {
+            Core.camera.position.x = x;
+            Core.camera.position.y = y;
         }
 
         //update shooting if not building, not mining and there's ammo left
