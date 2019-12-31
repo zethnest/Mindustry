@@ -1,29 +1,29 @@
-package io.anuke.mindustry.game.griefprevention;
+package mindustry.game.griefprevention;
 
-import io.anuke.arc.collection.Queue;
-import io.anuke.arc.math.Angles;
-import io.anuke.arc.math.Mathf;
-import io.anuke.arc.math.geom.Vector2;
-import io.anuke.arc.util.Interval;
-import io.anuke.arc.util.Time;
-import io.anuke.mindustry.content.Blocks;
-import io.anuke.mindustry.entities.traits.BuilderTrait;
-import io.anuke.mindustry.entities.traits.BuilderTrait.BuildRequest;
-import io.anuke.mindustry.entities.type.Player;
-import io.anuke.mindustry.entities.type.SolidEntity;
-import io.anuke.mindustry.entities.type.TileEntity;
-import io.anuke.mindustry.entities.type.Unit;
-import io.anuke.mindustry.gen.Call;
-import io.anuke.mindustry.type.Item;
-import io.anuke.mindustry.type.ItemStack;
-import io.anuke.mindustry.type.ItemType;
-import io.anuke.mindustry.world.Tile;
-import io.anuke.mindustry.world.blocks.sandbox.ItemSource.ItemSourceEntity;
-import io.anuke.mindustry.world.modules.ItemModule;
+import arc.struct.Queue;
+import arc.math.Angles;
+import arc.math.Mathf;
+import arc.math.geom.Vec2;
+import arc.util.Interval;
+import arc.util.Time;
+import mindustry.content.Blocks;
+import mindustry.entities.traits.BuilderTrait;
+import mindustry.entities.traits.BuilderTrait.BuildRequest;
+import mindustry.entities.type.Player;
+import mindustry.entities.type.SolidEntity;
+import mindustry.entities.type.TileEntity;
+import mindustry.entities.type.Unit;
+import mindustry.gen.Call;
+import mindustry.type.Item;
+import mindustry.type.ItemStack;
+import mindustry.type.ItemType;
+import mindustry.world.Tile;
+import mindustry.world.blocks.sandbox.ItemSource.ItemSourceEntity;
+import mindustry.world.modules.ItemModule;
 
 import java.lang.reflect.Field;
 
-import static io.anuke.mindustry.Vars.*;
+import static mindustry.Vars.*;
 
 /* Auto mode */
 public class Auto {
@@ -47,8 +47,8 @@ public class Auto {
     public Interval timer = new Interval(1);
     public static final int votekickWaitTimer = 0;
 
-    public Vector2 movement;
-    public Vector2 velocity;
+    public Vec2 movement;
+    public Vec2 velocity;
 
     public boolean movementControlled = false;
     public boolean shootControlled = false;
@@ -62,7 +62,7 @@ public class Auto {
             Class<Player> playerClass = Player.class;
             Field playerMovementField = playerClass.getDeclaredField("movement");
             playerMovementField.setAccessible(true);
-            movement = (Vector2) playerMovementField.get(player);
+            movement = (Vec2)playerMovementField.get(player);
         } catch (NoSuchFieldException | IllegalAccessException ex) {
             throw new RuntimeException("reflective access failed on Player.movement");
         }
@@ -70,7 +70,7 @@ public class Auto {
             Class<SolidEntity> solidEntityClass = SolidEntity.class;
             Field playerVelocityField = solidEntityClass.getDeclaredField("velocity");
             playerVelocityField.setAccessible(true);
-            velocity = (Vector2) playerVelocityField.get(player);
+            velocity = (Vec2)playerVelocityField.get(player);
         } catch (NoSuchFieldException | IllegalAccessException ex) {
             throw new RuntimeException("reflective access failed on SolidEntity.velocity");
         }

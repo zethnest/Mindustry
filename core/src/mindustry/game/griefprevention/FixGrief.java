@@ -1,17 +1,17 @@
-package io.anuke.mindustry.game.griefprevention;
+package mindustry.game.griefprevention;
 
-import io.anuke.arc.collection.Array;
-import io.anuke.arc.collection.ObjectSet;
-import io.anuke.arc.func.Boolf;
-import io.anuke.arc.func.Cons;
-import io.anuke.arc.math.geom.Geometry;
-import io.anuke.mindustry.world.Tile;
-import io.anuke.mindustry.world.blocks.power.PowerGraph;
-import io.anuke.mindustry.world.blocks.power.PowerNode;
+import arc.struct.Array;
+import arc.struct.ObjectSet;
+import arc.func.Boolf;
+import arc.func.Cons;
+import arc.math.geom.Geometry;
+import mindustry.world.Tile;
+import mindustry.world.blocks.power.PowerGraph;
+import mindustry.world.blocks.power.PowerNode;
 
 import java.lang.reflect.Field;
 
-import static io.anuke.mindustry.Vars.*;
+import static mindustry.Vars.*;
 
 public class FixGrief {
     // need this to get powernode laser range

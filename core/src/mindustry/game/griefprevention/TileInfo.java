@@ -1,8 +1,8 @@
-package io.anuke.mindustry.game.griefprevention;
+package mindustry.game.griefprevention;
 
-import io.anuke.arc.collection.ObjectSet;
-import io.anuke.mindustry.entities.type.Player;
-import io.anuke.mindustry.world.Block;
+import arc.struct.ObjectSet;
+import mindustry.entities.type.Player;
+import mindustry.world.Block;
 
 public class TileInfo implements Cloneable {
     public Player constructedBy;

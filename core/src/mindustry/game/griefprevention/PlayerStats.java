@@ -1,8 +1,8 @@
-package io.anuke.mindustry.game.griefprevention;
+package mindustry.game.griefprevention;
 
 import java.lang.ref.WeakReference;
 
-import io.anuke.mindustry.entities.type.Player;
+import mindustry.entities.type.Player;
 
 public class PlayerStats {
     // don't prevent garbage collection

@@ -1,23 +1,22 @@
-package io.anuke.mindustry.game.griefprevention;
+package mindustry.game.griefprevention;
 
-import io.anuke.arc.Core;
-import io.anuke.arc.collection.Array;
-import io.anuke.arc.func.Cons;
-import io.anuke.arc.math.geom.Vector2;
-import io.anuke.mindustry.content.Blocks;
-import io.anuke.mindustry.entities.traits.BuilderTrait.BuildRequest;
-import io.anuke.mindustry.entities.type.Player;
-import io.anuke.mindustry.game.Team;
-import io.anuke.mindustry.game.Teams.BrokenBlock;
-import io.anuke.mindustry.game.Teams.TeamData;
-import io.anuke.mindustry.gen.Call;
-import io.anuke.mindustry.net.Packets.AdminAction;
-import io.anuke.mindustry.world.Block;
-import io.anuke.mindustry.world.Build;
-import io.anuke.mindustry.world.Tile;
-import io.anuke.mindustry.world.blocks.BlockPart;
+import arc.Core;
+import arc.math.geom.Vec2;
+import arc.struct.Array;
+import arc.func.Cons;
+import mindustry.entities.traits.BuilderTrait.BuildRequest;
+import mindustry.entities.type.Player;
+import mindustry.game.Team;
+import mindustry.game.Teams.BrokenBlock;
+import mindustry.game.Teams.TeamData;
+import mindustry.gen.Call;
+import mindustry.net.Packets.AdminAction;
+import mindustry.world.Block;
+import mindustry.world.Build;
+import mindustry.world.Tile;
+import mindustry.world.blocks.BlockPart;
 
-import static io.anuke.mindustry.Vars.*;
+import static mindustry.Vars.*;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -162,7 +161,7 @@ public class CommandHandler {
     }
 
     public Tile getCursorTile() {
-        Vector2 vec = Core.input.mouseWorld(Core.input.mouseX(), Core.input.mouseY());
+        Vec2 vec = Core.input.mouseWorld(Core.input.mouseX(), Core.input.mouseY());
         return world.tile(world.toTile(vec.x), world.toTile(vec.y));
     }
 

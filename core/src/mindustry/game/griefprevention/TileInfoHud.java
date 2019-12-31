@@ -1,14 +1,14 @@
-package io.anuke.mindustry.game.griefprevention;
+package mindustry.game.griefprevention;
 
-import io.anuke.arc.Core;
-import io.anuke.arc.math.geom.Vector2;
-import io.anuke.arc.scene.Element;
-import io.anuke.arc.scene.event.Touchable;
-import io.anuke.arc.scene.ui.layout.Table;
-import io.anuke.mindustry.gen.Tex;
-import io.anuke.mindustry.world.Tile;
+import arc.Core;
+import arc.math.geom.Vec2;
+import arc.scene.Element;
+import arc.scene.event.Touchable;
+import arc.scene.ui.layout.Table;
+import mindustry.gen.Tex;
+import mindustry.world.Tile;
 
-import static io.anuke.mindustry.Vars.*;
+import static mindustry.Vars.*;
 
 public class TileInfoHud extends Table {
     private Tile lastTile = null;
