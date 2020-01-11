@@ -402,14 +402,6 @@ public class GriefWarnings {
         }
     }
 
-    public void handleItemBridgeCrashCondition(Tile tile, Tile source) {
-        TileInfo info = getTileInfo(tile);
-        Player target = null;
-        if (info != null) target = info.constructedBy;
-        sendMessage("[scarlet]ALERT[] Item bridge/liquid junction crash condition detected at " + formatTile(tile) + " built by " + formatPlayer(target));
-        if (target != null) doAutoban(target, "item bridge crash");
-    }
-
     public boolean doAutoban(Player targetPlayer, String reason) {
         if (player.isAdmin && targetPlayer != null && autoban) {
             Call.onAdminRequest(targetPlayer, AdminAction.ban);
