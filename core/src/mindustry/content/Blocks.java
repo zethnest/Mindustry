@@ -49,7 +49,7 @@ public class Blocks implements ContentList{
     melter, separator, sporePress, pulverizer, incinerator, coalCentrifuge,
 
     //sandbox
-    powerSource, powerVoid, itemSource, itemVoid, liquidSource, message, illuminator,
+    powerSource, powerVoid, itemSource, itemVoid, liquidSource, liquidVoid, message, illuminator,
 
     //defense
     copperWall, copperWallLarge, titaniumWall, titaniumWallLarge, plastaniumWall, plastaniumWallLarge, thoriumWall, thoriumWallLarge, door, doorLarge,
@@ -883,25 +883,29 @@ public class Blocks implements ContentList{
             requirements(Category.distribution, ItemStack.with(Items.copper, 1), true);
             health = 45;
             speed = 0.03f;
+            displayedSpeed = 4.2f;
         }};
 
         titaniumConveyor = new Conveyor("titanium-conveyor"){{
             requirements(Category.distribution, ItemStack.with(Items.copper, 1, Items.lead, 1, Items.titanium, 1));
             health = 65;
             speed = 0.08f;
+            displayedSpeed = 10f;
         }};
 
         armoredConveyor = new ArmoredConveyor("armored-conveyor"){{
             requirements(Category.distribution, ItemStack.with(Items.plastanium, 1, Items.thorium, 1, Items.metaglass, 1));
             health = 180;
             speed = 0.08f;
+            displayedSpeed = 10f;
         }};
 
         junction = new Junction("junction"){{
-            requirements(Category.distribution, ItemStack.with(Items.copper, 1), true);
+            requirements(Category.distribution, ItemStack.with(Items.copper, 2), true);
             speed = 26;
             capacity = 12;
             health = 30;
+            buildCostMultiplier = 6f;
         }};
 
         itemBridge = new BufferedItemBridge("bridge-conveyor"){{
@@ -921,16 +925,18 @@ public class Blocks implements ContentList{
 
         sorter = new Sorter("sorter"){{
             requirements(Category.distribution, ItemStack.with(Items.lead, 2, Items.copper, 2));
+            buildCostMultiplier = 3f;
         }};
 
         invertedSorter = new Sorter("inverted-sorter"){{
             requirements(Category.distribution, ItemStack.with(Items.lead, 2, Items.copper, 2));
+            buildCostMultiplier = 3f;
             invert = true;
         }};
 
         router = new Router("router"){{
             requirements(Category.distribution, ItemStack.with(Items.copper, 3));
-
+            buildCostMultiplier = 2f;
         }};
 
         distributor = new Router("distributor"){{
@@ -940,6 +946,7 @@ public class Blocks implements ContentList{
 
         overflowGate = new OverflowGate("overflow-gate"){{
             requirements(Category.distribution, ItemStack.with(Items.lead, 2, Items.copper, 4));
+            buildCostMultiplier = 3f;
         }};
 
         massDriver = new MassDriver("mass-driver"){{
@@ -1808,6 +1815,11 @@ public class Blocks implements ContentList{
         }};
 
         liquidSource = new LiquidSource("liquid-source"){{
+            requirements(Category.liquid, BuildVisibility.sandboxOnly, ItemStack.with());
+            alwaysUnlocked = true;
+        }};
+
+        liquidVoid = new LiquidVoid("liquid-void"){{
             requirements(Category.liquid, BuildVisibility.sandboxOnly, ItemStack.with());
             alwaysUnlocked = true;
         }};

@@ -133,9 +133,9 @@ public class NetClient implements ApplicationListener{
     }
 
     //called on all clients
-    @Remote(called = Loc.server, targets = Loc.server, variants = Variant.both)
+    @Remote(targets = Loc.server, variants = Variant.both)
     public static void sendMessage(String message, String sender, Player playersender){
-        if(Vars.ui != null && !(playersender != null && net.server() && sender.startsWith("[#" + player.getTeam().color.toString() + "]<T>"))){
+        if(Vars.ui != null){
             if(griefWarnings.auto.interceptMessage(message, sender, playersender)) return;
             Vars.ui.chatfrag.addMessage(message, sender);
         }
@@ -161,7 +161,7 @@ public class NetClient implements ApplicationListener{
             throw new ValidateException(player, "Player has sent a message above the text limit.");
         }
 
-        String original = message;
+        Events.fire(new PlayerChatEvent(player, message));
 
         //check if it's a command
         CommandResponse response = netServer.clientCommands.handleMessage(message, player);
@@ -198,8 +198,6 @@ public class NetClient implements ApplicationListener{
                 player.sendMessage(text);
             }
         }
-
-        Events.fire(new PlayerChatEvent(player, message, original));
     }
 
     public static String colorizeName(int id, String name){
@@ -522,7 +520,7 @@ public class NetClient implements ApplicationListener{
             return Core.settings.getString("usid-" + ip, null);
         }else{
             byte[] bytes = new byte[8];
-            new RandomXS128().nextBytes(bytes);
+            new Rand().nextBytes(bytes);
             String result = new String(Base64Coder.encode(bytes));
             Core.settings.put("usid-" + ip, result);
             Core.settings.save();

@@ -66,17 +66,17 @@ public class ServerControl implements ApplicationListener{
             "globalrules", "{reactorExplosions: false}"
         );
 
-        Log.setLogger((level, text, args1) -> {
-            String result = "[" + dateTime.format(LocalDateTime.now()) + "] " + format(tags[level.ordinal()] + " " + text + "&fr", args1);
+        Log.setLogger((level, text) -> {
+            String result = "[" + dateTime.format(LocalDateTime.now()) + "] " + format(tags[level.ordinal()] + " " + text + "&fr");
             System.out.println(result);
 
             if(Config.logging.bool()){
-                logToFile("[" + dateTime.format(LocalDateTime.now()) + "] " + format(tags[level.ordinal()] + " " + text + "&fr", false, args1));
+                logToFile("[" + dateTime.format(LocalDateTime.now()) + "] " + formatColors(tags[level.ordinal()] + " " + text + "&fr", false));
             }
 
             if(socketOutput != null){
                 try{
-                    socketOutput.println(format(text + "&fr", false, args1));
+                    socketOutput.println(formatColors(text + "&fr", false));
                 }catch(Throwable e){
                     err("Error occurred logging to socket: {0}", e.getClass().getSimpleName());
                 }
@@ -190,7 +190,7 @@ public class ServerControl implements ApplicationListener{
         });
 
         handler.register("version", "Displays server version info.", arg -> {
-            info("&lmVersion: &lyMindustry {0}-{1} {2} / build {3}", Version.number, Version.modifier, Version.type, Version.build);
+            info("&lmVersion: &lyMindustry {0}-{1} {2} / build {3}", Version.number, Version.modifier, Version.type, Version.build + (Version.revision == 0 ? "" : "." + Version.revision));
             info("&lmJava Version: &ly{0}", System.getProperty("java.version"));
         });
 
@@ -488,6 +488,37 @@ public class ServerControl implements ApplicationListener{
                 }
             }catch(IllegalArgumentException e){
                 err("Unknown config: '{0}'. Run the command with no arguments to get a list of valid configs.", arg[0]);
+            }
+        });
+
+        handler.register("subnet-ban", "[add/remove] [address]", "Ban a subnet. This simply rejects all connections with IPs starting with some string.", arg -> {
+            if(arg.length == 0){
+                Log.info("Subnets banned: &lc{0}", netServer.admins.getSubnetBans().isEmpty() ? "<none>" : "");
+                for(String subnet : netServer.admins.getSubnetBans()){
+                    Log.info("&ly  " + subnet + "");
+                }
+            }else if(arg.length == 1){
+                err("You must provide a subnet to add or remove.");
+            }else{
+                if(arg[0].equals("add")){
+                    if(netServer.admins.getSubnetBans().contains(arg[1])){
+                        err("That subnet is already banned.");
+                        return;
+                    }
+
+                    netServer.admins.addSubnetBan(arg[1]);
+                    Log.info("Banned &ly{0}&lc**", arg[1]);
+                }else if(arg[0].equals("remove")){
+                    if(!netServer.admins.getSubnetBans().contains(arg[1])){
+                        err("That subnet isn't banned.");
+                        return;
+                    }
+
+                    netServer.admins.removeSubnetBan(arg[1]);
+                    Log.info("Unbanned &ly{0}&lc**", arg[1]);
+                }else{
+                    err("Incorrect usage. You must provide add/remove as the second argument.");
+                }
             }
         });
 

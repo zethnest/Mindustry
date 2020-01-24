@@ -48,8 +48,7 @@ public class Player extends Unit implements BuilderMinerTrait, ShooterTrait{
     public float baseRotation;
     public float pointerX, pointerY;
     public String name = "noname";
-    public @Nullable
-    String uuid, usid;
+    public @Nullable String uuid, usid;
     public boolean isAdmin, isTransferring, isShooting, isBoosting, isMobile, isTyping, isBuilding = true;
     public boolean buildWasAutoPaused = false;
     public float boostHeat, shootHeat, destructTime;
@@ -117,6 +116,11 @@ public class Player extends Unit implements BuilderMinerTrait, ShooterTrait{
         setNet(tile.drawx(), tile.drawy());
         clearItem();
         heal();
+    }
+
+    @Override
+    public boolean offloadImmediately(){
+        return true;
     }
 
     @Override
@@ -345,13 +349,13 @@ public class Player extends Unit implements BuilderMinerTrait, ShooterTrait{
         Draw.reset();
     }
 
+    public void drawBackItems(){
+        drawBackItems(itemtime, isLocal);
+    }
+
     @Override
     public void drawStats(){
-        Draw.color(Color.black, team.color, healthf() + Mathf.absin(Time.time(), healthf() * 5f, 1f - healthf()));
-        Draw.rect(getPowerCellRegion(), x + Angles.trnsx(rotation, mech.cellTrnsY, 0f), y + Angles.trnsy(rotation, mech.cellTrnsY, 0f), rotation - 90);
-        Draw.reset();
-        drawBackItems(itemtime, isLocal);
-        drawLight();
+        mech.drawStats(this);
     }
 
     @Override
@@ -634,7 +638,7 @@ public class Player extends Unit implements BuilderMinerTrait, ShooterTrait{
         if(!state.isEditor() && isShooting() && mech.canShoot(this)){
             if(!mech.turnCursor){
                 //shoot forward ignoring cursor
-                mech.weapon.update(this, x + Angles.trnsx(rotation, 1f), y + Angles.trnsy(rotation, 1f));
+                mech.weapon.update(this, x + Angles.trnsx(rotation, mech.weapon.targetDistance), y + Angles.trnsy(rotation, mech.weapon.targetDistance));
             }else{
                 mech.weapon.update(this, pointerX, pointerY);
             }
@@ -765,7 +769,6 @@ public class Player extends Unit implements BuilderMinerTrait, ShooterTrait{
     public void sendMessage(String text){
         if(isLocal){
             if(Vars.ui != null){
-                Log.info("add " + text);
                 Vars.ui.chatfrag.addMessage(text, null);
             }
         }else{
