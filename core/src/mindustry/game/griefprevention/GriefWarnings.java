@@ -350,6 +350,14 @@ public class GriefWarnings {
         return "(" + tile.x + ", " + tile.y + ")";
     }
 
+    public String formatRatelimit(Ratelimit rl) {
+        return (rl.check() ? "exceeded" : "not exceeded") + " (" + rl.events() + " events in " + rl.findTime + " ms)";
+    }
+
+    public String formatRatelimit(Ratelimit rl, Player source) {
+        return (rl.check() ? "exceeded" : "not exceeded") + " for player " + formatPlayer(source) + " (" + rl.events() + " events in " + rl.findTime + " ms)";
+    }
+
     public void handlePowerGraphSplit(Player targetPlayer, Tile tile, PowerGraph oldGraph, PowerGraph newGraph1, PowerGraph newGraph2) {
         int oldGraphCount = oldGraph.all.size;
         int newGraph1Count = newGraph1.all.size;
@@ -363,7 +371,14 @@ public class GriefWarnings {
 
     public void handleBlockBeforeConfigure(Tile tile, Player targetPlayer, int value) {
         TileInfo info = getOrCreateTileInfo(tile);
-        if (targetPlayer != null) info.logInteraction(targetPlayer);
+        if (targetPlayer != null) {
+            info.logInteraction(targetPlayer);
+
+            PlayerStats stats = getOrCreatePlayerStats(targetPlayer);
+            if (stats.configureRatelimit.get()) {
+                Core.app.post(() -> sendMessage("[scarlet]WARNING[] Configure ratelimit " + formatRatelimit(stats.configureRatelimit, targetPlayer)));
+            }
+        }
 
         Block block = tile.block();
         if (block instanceof Sorter) {
@@ -393,6 +408,11 @@ public class GriefWarnings {
         if (verbose) {
             sendMessage("[green]Verbose[] " + formatPlayer(targetPlayer) + " rotates " +
                 tile.block().name + " at " + formatTile(tile));
+        }
+
+        PlayerStats stats = getOrCreatePlayerStats(targetPlayer);
+        if (stats.rotateRatelimit.get()) {
+            Core.app.post(() -> sendMessage("[scarlet]WARNING[] Rotate ratelimit " + formatRatelimit(stats.rotateRatelimit, targetPlayer)));
         }
     }
 
