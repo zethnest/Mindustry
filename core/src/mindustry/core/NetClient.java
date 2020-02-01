@@ -172,6 +172,11 @@ public class NetClient implements ApplicationListener{
                 return;
             }
 
+            //special case; graphical server needs to see its message
+            if(!headless && player == Vars.player){
+                Vars.ui.chatfrag.addMessage(message, colorizeName(player.id, player.name));
+            }
+
             //server console logging
             Log.info("&y{0}: &lb{1}", player.name, message);
 
@@ -263,6 +268,11 @@ public class NetClient implements ApplicationListener{
     }
 
     @Remote(variants = Variant.both)
+    public static void onInfoToast(String message, float duration){
+        ui.showInfoToast(message, duration);
+    }
+
+    @Remote(variants = Variant.both)
     public static void onSetRules(Rules rules){
         state.rules = rules;
     }
@@ -273,9 +283,6 @@ public class NetClient implements ApplicationListener{
         netClient.removed.clear();
         logic.reset();
 
-        // don't delete warnings from chat if new map loads
-        // ui.chatfrag.clearMessages();
-        ui.chatfrag.addMessage("========== new map loaded ==========", null);
         net.setClientLoaded(false);
 
         ui.loadfrag.show("$connecting.data");

@@ -58,8 +58,8 @@ public class BuildBlock extends Block{
         griefWarnings.handleBlockDeconstructFinish(tile, block, builderID);
         Team team = tile.getTeam();
         Effects.effect(Fx.breakBlock, tile.drawx(), tile.drawy(), block.size);
-        tile.remove();
         Events.fire(new BlockBuildEndEvent(tile, playerGroup.getByID(builderID), team, true));
+        tile.remove();
         if(shouldPlay()) Sounds.breaks.at(tile, calcPitch(false));
     }
 
