@@ -376,7 +376,7 @@ public class GriefWarnings {
 
             PlayerStats stats = getOrCreatePlayerStats(targetPlayer);
             if (stats.configureRatelimit.get()) {
-                Core.app.post(() -> sendMessage("[scarlet]WARNING[] Configure ratelimit " + formatRatelimit(stats.configureRatelimit, targetPlayer)));
+                stats.configureRatelimit.nextTick(rl -> sendMessage("[scarlet]WARNING[] Configure ratelimit " + formatRatelimit(rl, targetPlayer)));
             }
         }
 
@@ -412,7 +412,7 @@ public class GriefWarnings {
 
         PlayerStats stats = getOrCreatePlayerStats(targetPlayer);
         if (stats.rotateRatelimit.get()) {
-            Core.app.post(() -> sendMessage("[scarlet]WARNING[] Rotate ratelimit " + formatRatelimit(stats.rotateRatelimit, targetPlayer)));
+            stats.rotateRatelimit.nextTick(rl -> sendMessage("[scarlet]WARNING[] Rotate ratelimit " + formatRatelimit(rl, targetPlayer)));
         }
     }
 
