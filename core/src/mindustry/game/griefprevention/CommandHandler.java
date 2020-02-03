@@ -48,6 +48,7 @@ public class CommandHandler {
         addCommand("votekick", this::votekick);
         addCommand("tileinfohud", createToggle("tileinfohud", "tile information hud", v -> griefWarnings.tileInfoHud = v));
         addCommand("autoban", createToggle("autoban", "automatic bans", v -> griefWarnings.autoban = v));
+        addCommand("autotrace", createToggle("autotrace", "automatic trace", v -> griefWarnings.autotrace = v));
         addCommand("rebuild", this::rebuild);
         addCommand("auto", this::auto);
         addCommand("nextwave", this::nextwave);
@@ -168,7 +169,17 @@ public class CommandHandler {
     /** Get list of all players and their ids */
     public void players(Context ctx) {
         StringBuilder response = new StringBuilder("Players:");
-        for (Player player : playerGroup.all()) response.append("\n" + griefWarnings.formatPlayer(player));
+        for (Player target : playerGroup.all()) {
+            response.append("\n [accent]*[] ")
+                    .append(griefWarnings.formatPlayer(target))
+                    .append(" raw: ")
+                    .append(player.name.replaceAll("\\[", "[["));
+            PlayerStats stats = griefWarnings.playerStats.get(target);
+            if (stats != null && stats.trace != null) {
+                response.append(" trace: ")
+                        .append(griefWarnings.formatTrace(stats.trace));
+            }
+        }
         reply(response.toString());
     }
 

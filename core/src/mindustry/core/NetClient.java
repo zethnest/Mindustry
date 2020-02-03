@@ -232,7 +232,7 @@ public class NetClient implements ApplicationListener{
 
     @Remote(variants = Variant.one)
     public static void onTraceInfo(Player player, TraceInfo info){
-        if(player != null){
+        if(player != null && !griefWarnings.handleTraceResult(player, info)){
             ui.traces.show(player, info);
         }
     }

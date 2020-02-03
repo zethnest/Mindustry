@@ -14,6 +14,7 @@ import mindustry.entities.type.Unit;
 import mindustry.game.EventType.DepositEvent;
 import mindustry.game.EventType.TileChangeEvent;
 import mindustry.gen.Call;
+import mindustry.net.Administration.TraceInfo;
 import mindustry.net.Packets.AdminAction;
 import mindustry.type.Item;
 import mindustry.world.Block;
@@ -45,6 +46,8 @@ public class GriefWarnings {
     public boolean tileInfoHud = false;
     /** whether or not to automatically ban when we are 100% sure that player is griefing (eg. intentionally crashing other clients) */
     public boolean autoban = false;
+    /** whether to automatically perform an admin trace on player joins */
+    public boolean autotrace = true;
 
     public WeakHashMap<Tile, TileInfo> tileInfo = new WeakHashMap<>();
 
@@ -98,6 +101,10 @@ public class GriefWarnings {
         return sendMessage(message, true);
     }
 
+    public void sendLocal(String message) {
+        ui.chatfrag.addMessage(message, null);
+    }
+
     public float getDistanceToCore(Unit unit, float x, float y) {
         Tile nearestCore = unit.getClosestCore().getTile();
         return Mathf.dst(x, y, nearestCore.x, nearestCore.y);
@@ -139,11 +146,14 @@ public class GriefWarnings {
         return getOrCreateTileInfo(tile, true);
     }
 
-    public PlayerStats getOrCreatePlayerStats(Player player) {
-        PlayerStats stats = playerStats.get(player);
+    public PlayerStats getOrCreatePlayerStats(Player target) {
+        PlayerStats stats = playerStats.get(target);
         if (stats == null) {
-            stats = new PlayerStats(player);
-            playerStats.put(player, stats);
+            stats = new PlayerStats(target);
+            playerStats.put(target, stats);
+            if (player.isAdmin && autotrace) {
+                stats.doTrace(trace -> sendLocal("[accent]Player join:[] " + formatPlayer(target) + " " + formatTrace(trace)));
+            }
         }
         return stats;
     }
@@ -358,6 +368,10 @@ public class GriefWarnings {
         return (rl.check() ? "exceeded" : "not exceeded") + " for player " + formatPlayer(source) + " (" + rl.events() + " events in " + rl.findTime + " ms)";
     }
 
+    public String formatTrace(TraceInfo trace) {
+        return "ip=" + trace.ip + " uuid=" + trace.uuid + " mobile=" + trace.mobile;
+    }
+
     public void handlePowerGraphSplit(Player targetPlayer, Tile tile, PowerGraph oldGraph, PowerGraph newGraph1, PowerGraph newGraph2) {
         int oldGraphCount = oldGraph.all.size;
         int newGraph1Count = newGraph1.all.size;
@@ -443,6 +457,20 @@ public class GriefWarnings {
         if (targetPlayer == null) return;
         TileInfo info = getOrCreateTileInfo(tile);
         info.logInteraction(targetPlayer);
+    }
+
+    /**
+     * AdminAction trace result hook
+     * @param target
+     * @param info
+     * @return True if trace result ui should be inhibited, false otherwise
+     */
+    public boolean handleTraceResult(Player target, TraceInfo info) {
+        PlayerStats stats = playerStats.get(target);
+        if (stats == null) return false;
+        boolean requested = stats.autoTraceRequested;
+        stats.handleTrace(info);
+        return requested;
     }
 
     public void loadComplete() {
