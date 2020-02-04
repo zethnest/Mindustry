@@ -18,6 +18,7 @@ public class PlayerStats {
     public Ratelimit configureRatelimit = new Ratelimit(50, 1000);
     public boolean autoTraceRequested = false;
     public TraceInfo trace;
+    public boolean gone = false;
 
     private Array<Cons<TraceInfo>> traceListeners = new Array<>();
 

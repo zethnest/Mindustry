@@ -32,6 +32,7 @@ public class Scripts implements Disposable{
         if(!run(Core.files.internal("scripts/global.js").readString(), "global.js")){
             errored = true;
         }
+        Context.exit();
         Log.debug("Time to load script engine: {0}", Time.elapsed());
     }
 
@@ -41,6 +42,7 @@ public class Scripts implements Disposable{
 
     public String runConsole(String text){
         try{
+            Context.enter();
             Object o = context.evaluateString(scope, text, "console.js", 1, null);
             if(o instanceof NativeJavaObject){
                 o = ((NativeJavaObject)o).unwrap();
@@ -51,6 +53,8 @@ public class Scripts implements Disposable{
             return String.valueOf(o);
         }catch(Throwable t){
             return getError(t);
+        }finally{
+            Context.exit();
         }
     }
 
@@ -73,11 +77,14 @@ public class Scripts implements Disposable{
 
     private boolean run(String script, String file){
         try{
+            Context.enter();
             context.evaluateString(scope, script, file, 1, null);
             return true;
         }catch(Throwable t){
             log(LogLevel.err, file, "" + getError(t));
             return false;
+        }finally{
+            Context.exit();
         }
     }
 

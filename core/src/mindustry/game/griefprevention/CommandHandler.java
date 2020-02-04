@@ -4,6 +4,7 @@ import arc.Core;
 import arc.math.geom.Vec2;
 import arc.struct.Array;
 import arc.func.Cons;
+import arc.util.Log;
 import mindustry.entities.traits.BuilderTrait.BuildRequest;
 import mindustry.entities.type.Player;
 import mindustry.game.Team;
@@ -15,6 +16,7 @@ import mindustry.world.Block;
 import mindustry.world.Build;
 import mindustry.world.Tile;
 import mindustry.world.blocks.BlockPart;
+import org.mozilla.javascript.*;
 
 import static mindustry.Vars.*;
 
@@ -24,15 +26,18 @@ import java.util.List;
 
 // introducing the worst command system known to mankind
 public class CommandHandler {
-    public class Context {
+    public class CommandContext {
         public List<String> args;
 
-        public Context(List<String> args) {
+        public CommandContext(List<String> args) {
             this.args = args;
         }
     }
 
-    public HashMap<String, Cons<Context>> commands = new HashMap<>();
+    public ContextFactory scriptContextFactory = new ContextFactory();
+    public Context scriptContext;
+    public Scriptable scriptScope;
+    public HashMap<String, Cons<CommandContext>> commands = new HashMap<>();
 
     public CommandHandler() {
         addCommand("fixpower", this::fixPower);
@@ -52,9 +57,43 @@ public class CommandHandler {
         addCommand("rebuild", this::rebuild);
         addCommand("auto", this::auto);
         addCommand("nextwave", this::nextwave);
+        addCommand("playerinfo", this::playerInfo);
+        addCommand("eval", this::eval);
+
+        scriptContext = scriptContextFactory.enterContext();
+        scriptContext.setOptimizationLevel(9);
+        scriptContext.getWrapFactory().setJavaPrimitiveWrap(false);
+        scriptScope = new ImporterTopLevel(scriptContext);
+
+        try {
+            scriptContext.evaluateString(scriptScope, Core.files.internal("scripts/global.js").readString(), "global.js", 1, null);
+        } catch (Throwable ex) {
+            Log.err("global.js load failed", ex);
+        } finally {
+            Context.exit();
+        }
     }
 
-    public void addCommand(String name, Cons<Context> handler) {
+    public String runConsole(String text) {
+        try{
+            scriptContextFactory.enterContext();
+            Object o = scriptContext.evaluateString(scriptScope, text, "console.js", 1, null);
+            if(o instanceof NativeJavaObject){
+                o = ((NativeJavaObject)o).unwrap();
+            }
+            if(o instanceof Undefined){
+                o = "undefined";
+            }
+            return String.valueOf(o);
+        }catch(Throwable t){
+            t.printStackTrace();
+            return t.toString();
+        } finally {
+            Context.exit();
+        }
+    }
+
+    public void addCommand(String name, Cons<CommandContext> handler) {
         commands.put(name, handler);
     }
 
@@ -66,9 +105,9 @@ public class CommandHandler {
         if (!message.startsWith("/")) return false;
         String[] args = message.split(" ");
         args[0] = args[0].substring(1);
-        Cons<Context> command = commands.get(args[0].toLowerCase());
+        Cons<CommandContext> command = commands.get(args[0].toLowerCase());
         if (command == null) return false;
-        command.get(new Context(Arrays.asList(args)));
+        command.get(new CommandContext(Arrays.asList(args)));
         return true;
     }
 
@@ -78,13 +117,13 @@ public class CommandHandler {
      * If "redundant" is present as an argument, connect the block even if it is
      * already part of the same power graph.
      */
-    public void fixPower(Context ctx) {
+    public void fixPower(CommandContext ctx) {
         boolean redundant = ctx.args.contains("redundant");
         griefWarnings.fixer.fixPower(redundant);
         reply("[green]Done");
     }
 
-    public Cons<Context> createToggle(String name, String description, Cons<Boolean> consumer) {
+    public Cons<CommandContext> createToggle(String name, String description, Cons<Boolean> consumer) {
         return ctx -> {
             if (ctx.args.size() < 2) {
                 reply("[scarlet]Not enough arguments");
@@ -146,7 +185,7 @@ public class CommandHandler {
     }
 
     /** Get stored information for the tile under the cursor */
-    public void tileInfo(Context ctx) {
+    public void tileInfo(CommandContext ctx) {
         Tile tile = getCursorTile();
         if (tile == null) {
             reply("cursor is not on a tile");
@@ -167,13 +206,13 @@ public class CommandHandler {
     }
 
     /** Get list of all players and their ids */
-    public void players(Context ctx) {
+    public void players(CommandContext ctx) {
         StringBuilder response = new StringBuilder("Players:");
         for (Player target : playerGroup.all()) {
             response.append("\n [accent]*[] ")
                     .append(griefWarnings.formatPlayer(target))
                     .append(" raw: ")
-                    .append(player.name.replaceAll("\\[", "[["));
+                    .append(target.name.replaceAll("\\[", "[["));
             PlayerStats stats = griefWarnings.playerStats.get(target);
             if (stats != null && stats.trace != null) {
                 response.append(" trace: ")
@@ -181,6 +220,30 @@ public class CommandHandler {
             }
         }
         reply(response.toString());
+    }
+
+    /** Get information about a player */
+    public void playerInfo(CommandContext ctx) {
+        String name = String.join(" ", ctx.args.subList(1, ctx.args.size()));
+        PlayerStats stats = getStats(name);
+        if (stats == null) {
+            reply("[scarlet]Not found");
+            return;
+        }
+        Player target = stats.wrappedPlayer.get();
+        if (target == null) {
+            reply("[scarlet]PlayerStats weakref gone?");
+            return;
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("====================\n");
+        sb.append("Player ").append(griefWarnings.formatPlayer(target)).append("\n");
+        sb.append("gone: ").append(stats.gone).append("\n");
+        sb.append("position: (").append(target.getX()).append(", ").append(target.getY()).append(")\n");
+        sb.append("trace: ").append(griefWarnings.formatTrace(stats.trace)).append("\n");
+        sb.append("configure ratelimit: ").append(griefWarnings.formatRatelimit(stats.configureRatelimit)).append("\n");
+        sb.append("rotate ratelimit: ").append(griefWarnings.formatRatelimit(stats.rotateRatelimit));
+        reply(sb.toString());
     }
 
     /** Get player by either id or full name */
@@ -200,8 +263,28 @@ public class CommandHandler {
         return target;
     }
 
+    /** Get information on player, including historical data */
+    public PlayerStats getStats(String name) {
+        if (name.startsWith("#")) {
+            int id;
+            try {
+                id = Integer.parseInt(name.substring(1));
+            } catch (NumberFormatException ex) {
+                return null;
+            }
+            for (Player p : griefWarnings.playerStats.keySet()) {
+                if (p.id == id) return griefWarnings.playerStats.get(p);
+            }
+        } else {
+            for (Player p : griefWarnings.playerStats.keySet()) {
+                if (p.name.equals(name)) return griefWarnings.playerStats.get(p);
+            }
+        }
+        return null;
+    }
+
     /** Votekick overlay to allow /votekick using ids when prefixed by # */
-    public void votekick(Context ctx) {
+    public void votekick(CommandContext ctx) {
         String name = String.join(" ", ctx.args.subList(1, ctx.args.size())).toLowerCase();
         Player target = getPlayer(name);
         if (target == null) {
@@ -213,7 +296,7 @@ public class CommandHandler {
     }
 
     /** Attempt rebuild of destroyed blocks */
-    public void rebuild(Context ctx) {
+    public void rebuild(CommandContext ctx) {
         Team team = player.getTeam();
         TeamData data = state.teams.get(team);
         if (data.brokenBlocks.isEmpty()) {
@@ -231,7 +314,7 @@ public class CommandHandler {
     }
 
     /** Control the auto mode */
-    public void auto(Context ctx) {
+    public void auto(CommandContext ctx) {
         if (ctx.args.size() < 2) {
             reply("[scarlet]Not enough arguments");
             reply("Usage: auto <on|off|cancel|gotocore|gotoplayer|goto|distance|itemsource>");
@@ -380,7 +463,7 @@ public class CommandHandler {
         }
     }
 
-    public void nextwave(Context ctx) {
+    public void nextwave(CommandContext ctx) {
         if (!player.isAdmin) {
             reply("not admin!");
             return;
@@ -396,5 +479,10 @@ public class CommandHandler {
         }
         for (int i = 0; i < count; i++) Call.onAdminRequest(player, AdminAction.wave);
         reply("done");
+    }
+
+    public void eval(CommandContext ctx) {
+        String code = String.join(" ", ctx.args.subList(1, ctx.args.size()));
+        reply(runConsole(code));
     }
 }

@@ -68,6 +68,7 @@ public class GriefWarnings {
         debug = Core.settings.getBool("griefwarnings.debug", false);
         tileInfoHud = Core.settings.getBool("griefwarnings.tileinfohud", false);
         autoban = Core.settings.getBool("griefwarnings.autoban", false);
+        autotrace = Core.settings.getBool("griefwarnings.autotrace", true);
     }
 
     public void saveSettings() {
@@ -76,6 +77,7 @@ public class GriefWarnings {
         Core.settings.put("griefwarnings.debug", debug);
         Core.settings.put("griefwarnings.tileinfohud", tileInfoHud);
         Core.settings.put("griefwarnings.autoban", autoban);
+        Core.settings.put("griefwarnings.autotrace", autotrace);
         Core.settings.save();
     }
 
@@ -87,6 +89,7 @@ public class GriefWarnings {
                     null);
             ui.chatfrag.addMessage(message, null);
             ui.chatfrag.addMessage("Message length was [accent]" + message.length(), null);
+            Log.warn("[antigrief] Oversize message not sent (size " + message.length() + "): " + message);
             return false;
         }
         if (!Instant.now().isAfter(nextWarningTime) && throttled) return false;
@@ -152,7 +155,10 @@ public class GriefWarnings {
             stats = new PlayerStats(target);
             playerStats.put(target, stats);
             if (player.isAdmin && autotrace) {
-                stats.doTrace(trace -> sendLocal("[accent]Player join:[] " + formatPlayer(target) + " " + formatTrace(trace)));
+                stats.doTrace(trace -> {
+                    sendLocal("[accent]Player join:[] " + formatPlayer(target) + " " + formatTrace(trace));
+                    Log.info("[antigrief] Player join: " + target.name + " (" + player.id+ ") " + formatTrace(trace));
+                });
             }
         }
         return stats;
@@ -322,10 +328,8 @@ public class GriefWarnings {
     public void handlePlayerDisconnect(int playerId) {
         Player targetPlayer = playerGroup.getByID(playerId);
         // System.out.println("player disconnect: " + targetPlayer.name + "#" + targetPlayer.id);
-        playerStats.remove(targetPlayer);
-        if (debug) {
-            sendMessage("[cyan]Debug[] Player disconnect: " + targetPlayer.name + "[white] ([stat]#" + targetPlayer.id + "[])", false);
-        }
+        PlayerStats stats = playerStats.get(targetPlayer);
+        if (stats != null) stats.gone = true;
     }
 
     public void handleWorldDataBegin() {
@@ -365,10 +369,11 @@ public class GriefWarnings {
     }
 
     public String formatRatelimit(Ratelimit rl, Player source) {
-        return (rl.check() ? "exceeded" : "not exceeded") + " for player " + formatPlayer(source) + " (" + rl.events() + " events in " + rl.findTime + " ms)";
+        return (rl.check() ? "exceeded" : "not exceeded") + " for " + formatPlayer(source) + " (" + rl.events() + " events in " + rl.findTime + " ms)";
     }
 
     public String formatTrace(TraceInfo trace) {
+        if (trace == null) return "(trace not available)";
         return "ip=" + trace.ip + " uuid=" + trace.uuid + " mobile=" + trace.mobile;
     }
 
