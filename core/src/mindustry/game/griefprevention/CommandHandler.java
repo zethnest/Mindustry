@@ -23,6 +23,7 @@ import static mindustry.Vars.*;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map.Entry;
 
 // introducing the worst command system known to mankind
 public class CommandHandler {
@@ -58,6 +59,7 @@ public class CommandHandler {
         addCommand("auto", this::auto);
         addCommand("nextwave", this::nextwave);
         addCommand("playerinfo", this::playerInfo);
+        addCommand("pi", this::playerInfo); // playerinfo takes too long to type
         addCommand("eval", this::eval);
 
         scriptContext = scriptContextFactory.enterContext();
@@ -207,9 +209,10 @@ public class CommandHandler {
 
     /** Get list of all players and their ids */
     public void players(CommandContext ctx) {
-        StringBuilder response = new StringBuilder("Players:");
+        reply("Players:");
         for (Player target : playerGroup.all()) {
-            response.append("\n [accent]*[] ")
+            StringBuilder response = new StringBuilder();
+            response.append("[accent]*[] ")
                     .append(griefWarnings.formatPlayer(target))
                     .append(" raw: ")
                     .append(target.name.replaceAll("\\[", "[["));
@@ -218,8 +221,8 @@ public class CommandHandler {
                 response.append(" trace: ")
                         .append(griefWarnings.formatTrace(stats.trace));
             }
+            reply(response.toString());
         }
-        reply(response.toString());
     }
 
     /** Get information about a player */
@@ -235,6 +238,7 @@ public class CommandHandler {
             reply("[scarlet]PlayerStats weakref gone?");
             return;
         }
+        Core.app.setClipboardText(Integer.toString(target.id));
         StringBuilder sb = new StringBuilder();
         sb.append("====================\n");
         sb.append("Player ").append(griefWarnings.formatPlayer(target)).append("\n");
@@ -242,14 +246,23 @@ public class CommandHandler {
         sb.append("position: (").append(target.getX()).append(", ").append(target.getY()).append(")\n");
         sb.append("trace: ").append(griefWarnings.formatTrace(stats.trace)).append("\n");
         sb.append("configure ratelimit: ").append(griefWarnings.formatRatelimit(stats.configureRatelimit)).append("\n");
-        sb.append("rotate ratelimit: ").append(griefWarnings.formatRatelimit(stats.rotateRatelimit));
+        sb.append("rotate ratelimit: ").append(griefWarnings.formatRatelimit(stats.rotateRatelimit)).append("\n");
+        sb.append("Player id copied to clipboard");
         reply(sb.toString());
     }
 
     /** Get player by either id or full name */
     public Player getPlayer(String name) {
         Player target;
-        if (name.startsWith("#")) {
+        if (name.startsWith("&")) {
+            int ref;
+            try {
+                ref = Integer.parseInt(name.substring(1));
+            } catch (NumberFormatException ex) {
+                ref = -1;
+            }
+            target = griefWarnings.refs.get(ref);
+        } else if (name.startsWith("#")) {
             int id;
             try {
                 id = Integer.parseInt(name.substring(1));
@@ -258,26 +271,35 @@ public class CommandHandler {
             }
             target = playerGroup.getByID(id);
         } else {
-            target = playerGroup.find(p -> p.name.toLowerCase().equals(name));
+            target = playerGroup.find(p -> p.name.equalsIgnoreCase(name));
         }
         return target;
     }
 
     /** Get information on player, including historical data */
     public PlayerStats getStats(String name) {
-        if (name.startsWith("#")) {
+        if (name.startsWith("&")) {
+            int ref;
+            try {
+                ref = Integer.parseInt(name.substring(1));
+            } catch (NumberFormatException ex) {
+                ref = -1;
+            }
+            Player target = griefWarnings.refs.get(ref);
+            return target.stats;
+        } else if (name.startsWith("#")) {
             int id;
             try {
                 id = Integer.parseInt(name.substring(1));
             } catch (NumberFormatException ex) {
                 return null;
             }
-            for (Player p : griefWarnings.playerStats.keySet()) {
-                if (p.id == id) return griefWarnings.playerStats.get(p);
+            for (Entry<Player, PlayerStats> e : griefWarnings.playerStats.entrySet()) {
+                if (e.getKey().id == id) return e.getValue();
             }
         } else {
-            for (Player p : griefWarnings.playerStats.keySet()) {
-                if (p.name.equals(name)) return griefWarnings.playerStats.get(p);
+            for (Entry<Player, PlayerStats> e : griefWarnings.playerStats.entrySet()) {
+                if (e.getKey().name.equalsIgnoreCase(name)) return e.getValue();
             }
         }
         return null;

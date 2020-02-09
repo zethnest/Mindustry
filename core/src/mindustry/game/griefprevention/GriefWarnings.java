@@ -35,25 +35,25 @@ import java.util.WeakHashMap;
 
 public class GriefWarnings {
     private Instant nextWarningTime = Instant.now();
+    public WeakHashMap<Tile, TileInfo> tileInfo = new WeakHashMap<>();
     public WeakHashMap<Player, PlayerStats> playerStats = new WeakHashMap<>();
     /** whether or not to send warnings to all players */
-    public boolean broadcast = true;
+    public boolean broadcast = false;
     /** whether or not to be very noisy about everything */
     public boolean verbose = false;
     /** whether or not to flat out state the obvious, pissing everyone off */
     public boolean debug = false;
     /** whether or not to show the persistent tileinfo display */
-    public boolean tileInfoHud = false;
+    public boolean tileInfoHud = true;
     /** whether or not to automatically ban when we are 100% sure that player is griefing (eg. intentionally crashing other clients) */
     public boolean autoban = false;
     /** whether to automatically perform an admin trace on player joins */
     public boolean autotrace = true;
 
-    public WeakHashMap<Tile, TileInfo> tileInfo = new WeakHashMap<>();
-
     public CommandHandler commandHandler = new CommandHandler();
     public FixGrief fixer = new FixGrief();
     public Auto auto;
+    public RefList refs = new RefList();
 
     public GriefWarnings() {
         Events.on(DepositEvent.class, this::handleDeposit);
@@ -66,7 +66,7 @@ public class GriefWarnings {
         broadcast = Core.settings.getBool("griefwarnings.broadcast", false);
         verbose = Core.settings.getBool("griefwarnings.verbose", false);
         debug = Core.settings.getBool("griefwarnings.debug", false);
-        tileInfoHud = Core.settings.getBool("griefwarnings.tileinfohud", false);
+        tileInfoHud = Core.settings.getBool("griefwarnings.tileinfohud", true);
         autoban = Core.settings.getBool("griefwarnings.autoban", false);
         autotrace = Core.settings.getBool("griefwarnings.autotrace", true);
     }
@@ -96,7 +96,7 @@ public class GriefWarnings {
         nextWarningTime = Instant.now().plusSeconds(1);
         if (broadcast) Call.sendChatMessage(message);
         else if (net.client()) ui.chatfrag.addMessage(message, null);
-        else if (net.server()) Log.info("[griefwarnings] " + message);
+        else if (net.server()) Log.info("[antigrief] " + message);
         return true;
     }
 
@@ -135,11 +135,12 @@ public class GriefWarnings {
     }
 
     public TileInfo getOrCreateTileInfo(Tile tile, boolean doLinking) {
-        TileInfo info = tileInfo.get(tile);
+        TileInfo info = tile.info;
         if (info == null) {
             TileInfo newInfo = new TileInfo();
             info = newInfo;
             tileInfo.put(tile, newInfo);
+            tile.info = newInfo;
             if (doLinking) tile.getLinkedTiles(linked -> getOrCreateTileInfo(linked, false).doLink(newInfo));
         }
         return info;
@@ -150,10 +151,11 @@ public class GriefWarnings {
     }
 
     public PlayerStats getOrCreatePlayerStats(Player target) {
-        PlayerStats stats = playerStats.get(target);
+        PlayerStats stats = target.stats;
         if (stats == null) {
             stats = new PlayerStats(target);
             playerStats.put(target, stats);
+            target.stats = stats;
             if (player.isAdmin && autotrace) {
                 stats.doTrace(trace -> {
                     sendLocal("[accent]Player join:[] " + formatPlayer(target) + " " + formatTrace(trace));
@@ -336,10 +338,11 @@ public class GriefWarnings {
         playerStats.clear();
     }
 
-    public String formatPlayer(Player targetPlayer) {
+    public String formatPlayer(Player target) {
         String playerString;
-        if (targetPlayer != null) {
-            playerString = targetPlayer.name + "[white] ([stat]#" + targetPlayer.id + "[])";
+        if (target != null) {
+            int ref = refs.get(target);
+            playerString = target.name + "[white] ([stat]#" + target.id + " &" + ref + "[])";
         } else {
             playerString = "[lightgray]unknown[]";
         }

@@ -19,6 +19,7 @@ import mindustry.ctype.ContentType;
 import mindustry.entities.*;
 import mindustry.entities.traits.*;
 import mindustry.game.*;
+import mindustry.game.griefprevention.PlayerStats;
 import mindustry.gen.*;
 import mindustry.input.*;
 import mindustry.io.*;
@@ -66,6 +67,9 @@ public class Player extends Unit implements BuilderMinerTrait, ShooterTrait{
 
     public @Nullable String lastText;
     public float textFadeTime;
+
+    public PlayerStats stats = null;
+    public int ref = -1;
 
     private float walktime, itemtime;
     private Queue<BuildRequest> placeQueue = new Queue<>();
