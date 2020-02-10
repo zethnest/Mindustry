@@ -1,14 +1,13 @@
 package mindustry.game.griefprevention;
 
 import arc.struct.Array;
-import arc.struct.IntMap;
 import mindustry.entities.type.Player;
 
 import java.lang.ref.WeakReference;
 
 /** Holds short ids ("refs") for players */
 public class RefList {
-    private Array<WeakReference<Player>> list = new Array<>();
+    public Array<WeakReference<Player>> list = new Array<>();
     // why yes, i will put two stacks in one class
     /** current free ref entries */
     private int[] free = new int[16];
@@ -26,9 +25,17 @@ public class RefList {
             if (p == null) {
                 // player object was garbage collected, remove
                 list.set(i, null);
+                if (freePos == free.length) resizeFree(free.length << 1);
                 free[freePos++] = i;
             }
         }
+    }
+
+    public void resizeFree(int newLength) {
+        if (newLength < freePos) throw new RuntimeException("Array too short");
+        int[] oldFree = free;
+        free = new int[newLength];
+        System.arraycopy(oldFree, 0, free, 0, freePos);
     }
 
     public int get(Player p) {
@@ -37,7 +44,7 @@ public class RefList {
         // create new ref
         int ref;
         if (freePos > 0) {
-            ref = free[freePos];
+            ref = free[freePos - 1];
             free[freePos] = -1;
             freePos--;
         } else {
