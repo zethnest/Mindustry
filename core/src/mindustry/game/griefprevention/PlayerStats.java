@@ -19,6 +19,10 @@ public class PlayerStats {
     public boolean autoTraceRequested = false;
     public TraceInfo trace;
     public boolean gone = false;
+    public int configureCount = 0;
+    public int rotateCount = 0;
+    public int blocksConstructed = 0;
+    public int blocksBroken = 0;
 
     private Array<Cons<TraceInfo>> traceListeners = new Array<>();
 

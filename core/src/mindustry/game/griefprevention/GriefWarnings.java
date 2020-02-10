@@ -232,9 +232,14 @@ public class GriefWarnings {
         info.constructedBy = targetPlayer;
         info.currentBlock = block;
 
-        if (debug && targetPlayer != null) {
-            sendMessage("[cyan]Debug[] " + formatPlayer(targetPlayer) + " builds [accent]" +
-                tile.block().name + "[] at " + formatTile(tile), false);
+        if (targetPlayer != null) {
+            PlayerStats stats = getOrCreatePlayerStats(targetPlayer);
+            stats.blocksConstructed++;
+
+            if (debug) {
+                sendMessage("[cyan]Debug[] " + formatPlayer(targetPlayer) + " builds [accent]" +
+                        tile.block().name + "[] at " + formatTile(tile), false);
+            }
         }
     }
 
@@ -256,9 +261,14 @@ public class GriefWarnings {
         info.previousBlock = block;
         tile.getLinkedTiles(linked -> getOrCreateTileInfo(linked, false).unlink());
 
-        if (debug && targetPlayer != null) {
-            sendMessage("[cyan]Debug[] " + targetPlayer.name + "[white] ([stat]#" + builderId +
-                "[]) deconstructs [accent]" + tile.block().name + "[] at " + formatTile(tile), false);
+        if (targetPlayer != null) {
+            PlayerStats stats = getOrCreatePlayerStats(targetPlayer);
+            stats.blocksBroken++;
+
+            if (debug) {
+                sendMessage("[cyan]Debug[] " + targetPlayer.name + "[white] ([stat]#" + builderId +
+                        "[]) deconstructs [accent]" + tile.block().name + "[] at " + formatTile(tile), false);
+            }
         }
     }
 
@@ -397,6 +407,7 @@ public class GriefWarnings {
             info.logInteraction(targetPlayer);
 
             PlayerStats stats = getOrCreatePlayerStats(targetPlayer);
+            stats.configureCount++;
             if (stats.configureRatelimit.get()) {
                 stats.configureRatelimit.nextTick(rl -> sendMessage("[scarlet]WARNING[] Configure ratelimit " + formatRatelimit(rl, targetPlayer)));
             }
@@ -425,16 +436,17 @@ public class GriefWarnings {
         if (targetPlayer != null) {
             info.lastRotatedBy = targetPlayer;
             info.logInteraction(targetPlayer);
+
+            PlayerStats stats = getOrCreatePlayerStats(targetPlayer);
+            stats.rotateCount++;
+            if (stats.rotateRatelimit.get()) {
+                stats.rotateRatelimit.nextTick(rl -> sendMessage("[scarlet]WARNING[] Rotate ratelimit " + formatRatelimit(rl, targetPlayer)));
+            }
         }
 
         if (verbose) {
             sendMessage("[green]Verbose[] " + formatPlayer(targetPlayer) + " rotates " +
                 tile.block().name + " at " + formatTile(tile));
-        }
-
-        PlayerStats stats = getOrCreatePlayerStats(targetPlayer);
-        if (stats.rotateRatelimit.get()) {
-            stats.rotateRatelimit.nextTick(rl -> sendMessage("[scarlet]WARNING[] Rotate ratelimit " + formatRatelimit(rl, targetPlayer)));
         }
     }
 

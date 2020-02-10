@@ -244,6 +244,10 @@ public class CommandHandler {
         sb.append("gone: ").append(stats.gone).append("\n");
         sb.append("position: (").append(target.getX()).append(", ").append(target.getY()).append(")\n");
         sb.append("trace: ").append(griefWarnings.formatTrace(stats.trace)).append("\n");
+        sb.append("blocks constructed: ").append(stats.blocksConstructed).append("\n");
+        sb.append("blocks broken: ").append(stats.blocksBroken).append("\n");
+        sb.append("configure count: ").append(stats.configureCount).append("\n");
+        sb.append("rotate count: ").append(stats.rotateCount).append("\n");
         sb.append("configure ratelimit: ").append(griefWarnings.formatRatelimit(stats.configureRatelimit)).append("\n");
         sb.append("rotate ratelimit: ").append(griefWarnings.formatRatelimit(stats.rotateRatelimit)).append("\n");
         sb.append("Player id copied to clipboard");
@@ -285,7 +289,8 @@ public class CommandHandler {
                 ref = -1;
             }
             Player target = griefWarnings.refs.get(ref);
-            return target.stats;
+            if (target.stats != null) return target.stats;
+            else return griefWarnings.getOrCreatePlayerStats(target);
         } else if (name.startsWith("#")) {
             int id;
             try {

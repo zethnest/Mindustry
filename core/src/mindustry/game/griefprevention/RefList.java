@@ -14,7 +14,7 @@ public class RefList {
     private int freePos = 0;
     private int cleanupCount = 0;
     /** amount of calls to getRef() before cleanup */
-    private static final int cleanupInterval = 5;
+    private static final int cleanupInterval = 25;
 
     public void cleanup() {
         cleanupCount = 0;
