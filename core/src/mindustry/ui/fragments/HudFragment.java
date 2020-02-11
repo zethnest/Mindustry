@@ -44,6 +44,9 @@ public class HudFragment extends Fragment{
     private boolean shown = true;
     private float dsize = 47.2f;
 
+    private String hudText = "";
+    private boolean showHudText;
+
     private long lastToast;
 
     public void build(Group parent){
@@ -350,6 +353,19 @@ public class HudFragment extends Fragment{
             t.add(new TileInfoHud());
         });
 
+        parent.fill(p -> {
+            p.top().table(Styles.black3, t -> t.margin(4).label(() -> hudText)
+            .style(Styles.outlineLabel)).padTop(10).visible(p.color.a >= 0.001f);
+            p.update(() -> {
+                p.color.a = Mathf.lerpDelta(p.color.a, Mathf.num(showHudText), 0.2f);
+                if(state.is(State.menu)){
+                    p.color.a = 0f;
+                    showHudText = false;
+                }
+            });
+            p.touchable(Touchable.disabled);
+        });
+
         blockfrag.build(parent);
     }
 
@@ -375,6 +391,15 @@ public class HudFragment extends Fragment{
         if(state.isEditor() && unit != null){
             unit.remove();
         }
+    }
+
+    public void setHudText(String text){
+        showHudText = true;
+        hudText = text;
+    }
+
+    public void toggleHudText(boolean shown){
+        showHudText = shown;
     }
 
     private void scheduleToast(Runnable run){
