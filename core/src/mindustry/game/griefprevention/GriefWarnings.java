@@ -406,7 +406,8 @@ public class GriefWarnings {
 
             PlayerStats stats = getOrCreatePlayerStats(targetPlayer);
             stats.configureCount++;
-            if (stats.configureRatelimit.get()) {
+            // don't trip on auto item source config
+            if (tile.block() != Blocks.itemSource && stats.configureRatelimit.get()) {
                 stats.configureRatelimit.nextTick(rl -> sendMessage("[scarlet]WARNING[] Configure ratelimit " + formatRatelimit(rl, targetPlayer)));
             }
         }
