@@ -50,9 +50,9 @@ public class Scripts implements Disposable{
     }
 
     public String runConsole(String text){
+        Context ctx = Vars.platform.enterScriptContext(context);
         try{
-            Context.enter();
-            Object o = context.evaluateString(scope, text, "console.js", 1, null);
+            Object o = ctx.evaluateString(scope, text, "console.js", 1, null);
             if(o instanceof NativeJavaObject){
                 o = ((NativeJavaObject)o).unwrap();
             }
@@ -87,13 +87,13 @@ public class Scripts implements Disposable{
     }
 
     private boolean run(String script, String file){
-        Context.enter();
+        Context ctx = Vars.platform.enterScriptContext(context);
         try{
             if(currentMod != null){
                 //inject script info into file (TODO maybe rhino handles this?)
-                context.evaluateString(scope, "modName = \"" + currentMod.name + "\"\nscriptName = \"" + file + "\"", "initscript.js", 1, null);
+                ctx.evaluateString(scope, "modName = \"" + currentMod.name + "\"\nscriptName = \"" + file + "\"", "initscript.js", 1, null);
             }
-            context.evaluateString(scope, script, file, 1, null);
+            ctx.evaluateString(scope, script, file, 1, null);
             return true;
         }catch(Throwable t){
             log(LogLevel.err, file, "" + getError(t));
@@ -105,7 +105,7 @@ public class Scripts implements Disposable{
 
     @Override
     public void dispose(){
-        Context.exit();
+        // do nothing
     }
 
     private class ScriptModuleProvider extends UrlModuleSourceProvider{

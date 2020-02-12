@@ -36,6 +36,7 @@ public class CommandHandler {
     }
 
     public ContextFactory scriptContextFactory = new ContextFactory();
+    public Context scriptContext;
     public Scriptable scriptScope;
     public HashMap<String, Cons<CommandContext>> commands = new HashMap<>();
 
@@ -61,7 +62,7 @@ public class CommandHandler {
         addCommand("pi", this::playerInfo); // playerinfo takes too long to type
         addCommand("eval", this::eval);
 
-        Context scriptContext = scriptContextFactory.enterContext();
+        scriptContext = scriptContextFactory.enterContext();
         scriptContext.setOptimizationLevel(9);
         scriptContext.getWrapFactory().setJavaPrimitiveWrap(false);
         scriptScope = new ImporterTopLevel(scriptContext);
@@ -76,9 +77,9 @@ public class CommandHandler {
     }
 
     public String runConsole(String text) {
-        Context scriptContext = scriptContextFactory.enterContext();
-        try{
-            Object o = scriptContext.evaluateString(scriptScope, text, "console.js", 1, null);
+        Context ctx = scriptContextFactory.enterContext(scriptContext);
+        try {
+            Object o = ctx.evaluateString(scriptScope, text, "console.js", 1, null);
             if(o instanceof NativeJavaObject){
                 o = ((NativeJavaObject)o).unwrap();
             }
@@ -86,7 +87,7 @@ public class CommandHandler {
                 o = "undefined";
             }
             return String.valueOf(o);
-        }catch(Throwable t){
+        } catch(Throwable t) {
             Log.err("Script error", t);
             return t.toString();
         } finally {
