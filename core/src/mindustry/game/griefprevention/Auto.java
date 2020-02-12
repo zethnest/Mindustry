@@ -312,6 +312,12 @@ public class Auto {
         wasAutoShooting = false;
     }
 
+    public void reset() {
+        cancelMovement();
+        targetItemSource = null;
+        autoDumpTarget = null;
+    }
+
     public void handlePlayerShoot(Player target, float offsetX, float offsetY, float rotation) {
         if (target == targetEntity) targetEntityLastRotation = rotation;
     }

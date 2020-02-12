@@ -156,7 +156,6 @@ public class Net{
         provider.disconnectClient();
         server = false;
         active = false;
-        griefWarnings.handleDisconnect();
     }
 
     public byte[] compressSnapshot(byte[] input){

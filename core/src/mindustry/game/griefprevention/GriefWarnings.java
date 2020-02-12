@@ -12,6 +12,7 @@ import mindustry.content.Liquids;
 import mindustry.entities.type.Player;
 import mindustry.entities.type.Unit;
 import mindustry.game.EventType.DepositEvent;
+import mindustry.game.EventType.ResetEvent;
 import mindustry.game.EventType.TileChangeEvent;
 import mindustry.gen.Call;
 import mindustry.net.Administration.TraceInfo;
@@ -58,6 +59,7 @@ public class GriefWarnings {
     public GriefWarnings() {
         Events.on(DepositEvent.class, this::handleDeposit);
         Events.on(TileChangeEvent.class, this::handleTileChange);
+        Events.on(ResetEvent.class, this::reset);
 
         loadSettings();
     }
@@ -121,13 +123,11 @@ public class GriefWarnings {
         return getDistanceToCore(unit, unit.x, unit.y);
     }
 
-    public void handleConnectFinish() {
-        // TODO: future
-    }
-
-    public void handleDisconnect() {
+    public void reset() {
         tileInfo.clear();
         playerStats.clear();
+        refs.reset();
+        if (auto != null) auto.reset();
     }
 
     public void handleTileChange(TileChangeEvent event) {

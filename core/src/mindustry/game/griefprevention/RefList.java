@@ -16,6 +16,13 @@ public class RefList {
     /** amount of calls to getRef() before cleanup */
     private static final int cleanupInterval = 25;
 
+    public void reset() {
+        cleanupCount = 0;
+        free = new int[16];
+        freePos = 0;
+        list.clear();
+    }
+
     public void cleanup() {
         cleanupCount = 0;
         for (int i = 0; i < list.size; i++) {
@@ -29,6 +36,7 @@ public class RefList {
                 free[freePos++] = i;
             }
         }
+        if (list.size == 0) reset();
     }
 
     public void resizeFree(int newLength) {

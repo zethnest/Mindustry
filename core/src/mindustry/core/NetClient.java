@@ -499,7 +499,6 @@ public class NetClient implements ApplicationListener{
         Core.app.post(Call::connectConfirm);
         Time.runTask(40f, platform::updateRPC);
         Core.app.post(() -> ui.loadfrag.hide());
-        griefWarnings.handleConnectFinish();
     }
 
     private void reset(){
