@@ -286,7 +286,7 @@ public class CommandHandler {
             try {
                 ref = Integer.parseInt(name.substring(1));
             } catch (NumberFormatException ex) {
-                ref = -1;
+                return null;
             }
             Player target = griefWarnings.refs.get(ref);
             if (target.stats != null) return target.stats;

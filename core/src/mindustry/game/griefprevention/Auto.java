@@ -44,8 +44,9 @@ public class Auto {
 
     public float targetEntityLastRotation;
 
-    public Interval timer = new Interval(1);
+    public Interval timer = new Interval(2);
     public static final int votekickWaitTimer = 0;
+    public static final int itemTransferTimer = 1;
 
     public Vec2 movement;
     public Vec2 velocity;
@@ -152,8 +153,7 @@ public class Auto {
             return;
         }
         ItemStack stack = player.item();
-        // add 10 to timer to not spam
-        if (player.timer == null || !player.timer.check(Player.timerTransfer, 50)) return;
+        if (timer.get(itemTransferTimer, 50)) return;
         if (stack.amount > 0 &&
                 tile.block().acceptStack(stack.item, stack.amount, tile, player) > 0 &&
                 !player.isTransferring) {

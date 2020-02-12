@@ -174,15 +174,13 @@ public class GriefWarnings {
         float coreDistance = getDistanceToCore(builder, tile);
         // persistent warnings that keep showing
         if (coreDistance < 30 && cblock instanceof NuclearReactor) {
-            String message = "[scarlet]WARNING[] " + builder.name + "[white] ([stat]#" + builder.id
-                    + "[]) is building a reactor [stat]" + Math.round(coreDistance) + "[] blocks from core. [stat]"
-                    + Math.round(progress * 100) + "%";
+            String message = "[scarlet]WARNING[] " + formatPlayer(builder) + " is building a reactor [stat]" +
+                    Math.round(coreDistance) + "[] blocks from core. [stat]" + Math.round(progress * 100) + "%";
             sendMessage(message);
             didWarn = true;
         } else if (coreDistance < 10 && cblock instanceof ItemLiquidGenerator) {
-            String message = "[scarlet]WARNING[] " + builder.name + "[white] ([stat]#" + builder.id
-                    + "[]) is building a generator [stat]" + Math.round(coreDistance) + "[] blocks from core. [stat]"
-                    + Math.round(progress * 100) + "%";
+            String message = "[scarlet]WARNING[] " + formatPlayer(builder) + " is building a generator [stat]" +
+                    Math.round(coreDistance) + "[] blocks from core. [stat]" + Math.round(progress * 100) + "%";
             sendMessage(message);
             didWarn = true;
         }
