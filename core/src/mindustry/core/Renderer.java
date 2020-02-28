@@ -130,7 +130,7 @@ public class Renderer implements ApplicationListener{
                         camera.position.lerpDelta(position, 0.08f);
                     }
                 }
-            }else if(control.input instanceof DesktopInput && !state.isPaused()){
+            }else if(control.input instanceof DesktopInput && !state.isPaused() && !griefWarnings.auto.cameraOverride()){
                 camera.position.lerpDelta(position, 0.08f);
             }
 

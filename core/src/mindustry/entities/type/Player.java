@@ -575,7 +575,7 @@ public class Player extends Unit implements BuilderMinerTrait, ShooterTrait{
 
     protected void updateKeyboard(){
         Tile tile = world.tileWorld(x, y);
-        boolean canMove = !Core.scene.hasKeyboard() || ui.minimapfrag.shown();
+        boolean canMove = (!Core.scene.hasKeyboard() || ui.minimapfrag.shown()) && !griefWarnings.auto.movementOverride();
 
         isBoosting = Core.input.keyDown(Binding.dash) && !mech.flying;
 

@@ -5,15 +5,10 @@ import arc.math.geom.Vec2;
 import arc.struct.Array;
 import arc.func.Cons;
 import arc.util.Log;
-import mindustry.entities.traits.BuilderTrait.BuildRequest;
 import mindustry.entities.type.Player;
-import mindustry.game.Team;
-import mindustry.game.Teams.BrokenBlock;
-import mindustry.game.Teams.TeamData;
 import mindustry.gen.Call;
 import mindustry.net.Packets.AdminAction;
 import mindustry.world.Block;
-import mindustry.world.Build;
 import mindustry.world.Tile;
 import mindustry.world.blocks.BlockPart;
 import org.mozilla.javascript.*;
@@ -27,7 +22,7 @@ import java.util.Map.Entry;
 
 // introducing the worst command system known to mankind
 public class CommandHandler {
-    public class CommandContext {
+    public static class CommandContext {
         public List<String> args;
 
         public CommandContext(List<String> args) {
@@ -42,26 +37,28 @@ public class CommandHandler {
 
     public CommandHandler() {
         addCommand("fixpower", this::fixPower);
-        addCommand("verbose", createToggle("verbose", "verbose logging", v -> griefWarnings.verbose = v));
-        addCommand("debug", createToggle("debug", "debug logging", v -> griefWarnings.debug = v));
-        addCommand("spam", createToggle("spam", "verbose and debug logging", v -> {
+        addCommand("verbose", settingsToggle("verbose", "verbose logging", v -> griefWarnings.verbose = v));
+        addCommand("debug", settingsToggle("debug", "debug logging", v -> griefWarnings.debug = v));
+        addCommand("spam", settingsToggle("spam", "verbose and debug logging", v -> {
             griefWarnings.verbose = v;
             griefWarnings.debug = v;
         }));
-        addCommand("broadcast", createToggle("broadcast", "broadcast of messages", v -> griefWarnings.broadcast = v));
+        addCommand("broadcast", settingsToggle("broadcast", "broadcast of messages", v -> griefWarnings.broadcast = v));
         addCommand("tileinfo", this::tileInfo);
         addCommand("players", this::players);
         addCommand("votekick", this::votekick);
-        addCommand("tileinfohud", createToggle("tileinfohud", "tile information hud", v -> griefWarnings.tileInfoHud = v));
-        addCommand("autoban", createToggle("autoban", "automatic bans", v -> griefWarnings.autoban = v));
-        addCommand("autotrace", createToggle("autotrace", "automatic trace", v -> griefWarnings.autotrace = v));
-        addCommand("rebuild", this::rebuild);
+        addCommand("tileinfohud", settingsToggle("tileinfohud", "tile information hud", v -> griefWarnings.tileInfoHud = v));
+        addCommand("autoban", settingsToggle("autoban", "automatic bans", v -> griefWarnings.autoban = v));
+        addCommand("autotrace", settingsToggle("autotrace", "automatic trace", v -> griefWarnings.autotrace = v));
         addCommand("auto", this::auto);
         addCommand("nextwave", this::nextwave);
         addCommand("playerinfo", this::playerInfo);
         addCommand("pi", this::playerInfo); // playerinfo takes too long to type
         addCommand("eval", this::eval);
+        addCommand("freecam", createToggle("freecam", "free movement of camera", v -> griefWarnings.auto.setFreecam(v)));
+        addCommand("show", this::show);
 
+        // mods context not yet initialized here
         scriptContext = scriptContextFactory.enterContext();
         scriptContext.setOptimizationLevel(9);
         scriptContext.getWrapFactory().setJavaPrimitiveWrap(false);
@@ -77,6 +74,8 @@ public class CommandHandler {
     }
 
     public String runConsole(String text) {
+        Context prevContext = Context.getCurrentContext();
+        if (prevContext != null) Context.exit();
         Context ctx = scriptContextFactory.enterContext(scriptContext);
         try {
             Object o = ctx.evaluateString(scriptScope, text, "console.js", 1, null);
@@ -92,6 +91,7 @@ public class CommandHandler {
             return t.toString();
         } finally {
             Context.exit();
+            if (prevContext != null) platform.enterScriptContext(prevContext);
         }
     }
 
@@ -146,10 +146,15 @@ public class CommandHandler {
                 default:
                     reply("[scarlet]Not enough arguments");
                     reply("Usage: " + name + " <on|off>");
-                    return;
             }
-            griefWarnings.saveSettings();
         };
+    }
+
+    public Cons<CommandContext> settingsToggle(String name, String description, Cons<Boolean> consumer) {
+        return createToggle(name, description, v -> {
+            consumer.get(v);
+            griefWarnings.saveSettings();
+        });
     }
 
     public Array<String> tileInfo(Tile tile) {
@@ -239,20 +244,19 @@ public class CommandHandler {
             return;
         }
         Core.app.setClipboardText(Integer.toString(target.id));
-        StringBuilder sb = new StringBuilder();
-        sb.append("====================\n");
-        sb.append("Player ").append(griefWarnings.formatPlayer(target)).append("\n");
-        sb.append("gone: ").append(stats.gone).append("\n");
-        sb.append("position: (").append(target.getX()).append(", ").append(target.getY()).append(")\n");
-        sb.append("trace: ").append(griefWarnings.formatTrace(stats.trace)).append("\n");
-        sb.append("blocks constructed: ").append(stats.blocksConstructed).append("\n");
-        sb.append("blocks broken: ").append(stats.blocksBroken).append("\n");
-        sb.append("configure count: ").append(stats.configureCount).append("\n");
-        sb.append("rotate count: ").append(stats.rotateCount).append("\n");
-        sb.append("configure ratelimit: ").append(griefWarnings.formatRatelimit(stats.configureRatelimit)).append("\n");
-        sb.append("rotate ratelimit: ").append(griefWarnings.formatRatelimit(stats.rotateRatelimit)).append("\n");
-        sb.append("Player id copied to clipboard");
-        reply(sb.toString());
+        String r = "====================\n" +
+                "Player " + griefWarnings.formatPlayer(target) + "\n" +
+                "gone: " + stats.gone + "\n" +
+                "position: (" + target.getX() + ", " + target.getY() + ")\n" +
+                "trace: " + griefWarnings.formatTrace(stats.trace) + "\n" +
+                "blocks constructed: " + stats.blocksConstructed + "\n" +
+                "blocks broken: " + stats.blocksBroken + "\n" +
+                "configure count: " + stats.configureCount + "\n" +
+                "rotate count: " + stats.rotateCount + "\n" +
+                "configure ratelimit: " + griefWarnings.formatRatelimit(stats.configureRatelimit) + "\n" +
+                "rotate ratelimit: " + griefWarnings.formatRatelimit(stats.rotateRatelimit) + "\n" +
+                "Player id copied to clipboard";
+        reply(r);
     }
 
     /** Get player by either id or full name */
@@ -278,6 +282,18 @@ public class CommandHandler {
             target = playerGroup.find(p -> p.name.equalsIgnoreCase(name));
         }
         return target;
+    }
+
+    public Tile findTile(String a, String b) {
+        int x;
+        int y;
+        try {
+            x = Integer.parseInt(a);
+            y = Integer.parseInt(b);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+        return world.tile(x, y);
     }
 
     /** Get information on player, including historical data */
@@ -322,24 +338,6 @@ public class CommandHandler {
         Call.sendChatMessage("/votekick " + target.name);
     }
 
-    /** Attempt rebuild of destroyed blocks */
-    public void rebuild(CommandContext ctx) {
-        Team team = player.getTeam();
-        TeamData data = state.teams.get(team);
-        if (data.brokenBlocks.isEmpty()) {
-            reply("Broken blocks queue is empty");
-            return;
-        }
-        for (BrokenBlock broken : data.brokenBlocks) {
-            if(Build.validPlace(team, broken.x, broken.y, content.block(broken.block), broken.rotation)) {
-                Block block = content.block(broken.block);
-                reply("Adding block " + block.name + " at (" + broken.x + ", " + broken.y + ")");
-                player.buildQueue().addLast(new BuildRequest(broken.x, broken.y, broken.rotation, block).configure(broken.config));
-            }
-        }
-        reply("Added rebuild to build queue");
-    }
-
     /** Control the auto mode */
     public void auto(CommandContext ctx) {
         if (ctx.args.size() < 2) {
@@ -368,16 +366,11 @@ public class CommandHandler {
                     reply("Usage: auto goto <x> <y>");
                     return;
                 }
-                int x;
-                int y;
-                try {
-                    x = Integer.parseInt(ctx.args.get(2));
-                    y = Integer.parseInt(ctx.args.get(3));
-                } catch (NumberFormatException ex) {
-                    reply("[scarlet]Invalid integer provided");
+                Tile tile = findTile(ctx.args.get(2), ctx.args.get(3));
+                if (tile == null) {
+                    reply("[scarlet]Invalid tile");
                     return;
                 }
-                Tile tile = world.tile(x, y);
                 auto.gotoTile(tile, 50f);
                 reply("going to tile " + griefWarnings.formatTile(tile));
                 break;
@@ -410,7 +403,7 @@ public class CommandHandler {
                         distance = 50f;
                         break;
                 }
-                String name = String.join(" ", ctx.args.subList(nameStart, ctx.args.size())).toLowerCase();
+                String name = String.join(" ", ctx.args.subList(nameStart, ctx.args.size()));
                 Player target = getPlayer(name);
                 if (target == null) {
                     reply("[scarlet]No such player");
@@ -511,5 +504,32 @@ public class CommandHandler {
     public void eval(CommandContext ctx) {
         String code = String.join(" ", ctx.args.subList(1, ctx.args.size()));
         reply(runConsole(code));
+    }
+
+    /** Switch to freecam and focus on an object */
+    public void show(CommandContext ctx) {
+        if (ctx.args.size() < 2) {
+            reply("No target given");
+            return;
+        }
+
+        if (ctx.args.size() == 3) {
+            Tile tile = findTile(ctx.args.get(1), ctx.args.get(2));
+            if (tile != null) {
+                reply("Showing tile " + griefWarnings.formatTile(tile));
+                griefWarnings.auto.setFreecam(true, tile.getX(), tile.getY());
+                return;
+            }
+        }
+
+        String name = String.join(" ", ctx.args.subList(1, ctx.args.size()));
+        Player target = getPlayer(name);
+        if (target == null) {
+            reply("Target does not exist");
+            return;
+        }
+
+        reply("Showing player " + griefWarnings.formatPlayer(target));
+        griefWarnings.auto.setFreecam(true, target.x, target.y);
     }
 }

@@ -156,11 +156,15 @@ public class GriefWarnings {
             stats = new PlayerStats(target);
             playerStats.put(target, stats);
             target.stats = stats;
+            refs.get(target); // create ref
+            if (target == player) return stats;
             if (player.isAdmin && autotrace) {
                 stats.doTrace(trace -> {
                     sendLocal("[accent]Player join:[] " + formatPlayer(target) + " " + formatTrace(trace));
                     Log.info("[antigrief] Player join: " + target.name + " (" + player.id+ ") " + formatTrace(trace));
                 });
+            } else {
+                sendLocal("[accent]Player join:[] " + formatPlayer(target));
             }
         }
         return stats;
@@ -304,24 +308,20 @@ public class GriefWarnings {
             String message = "[scarlet]WARNING[] " + targetPlayer.name + "[white] ([stat]#" +
                 targetPlayer.id + "[]) transfers [accent]" + amount + "[] thorium to a reactor. " + formatTile(tile);
             sendMessage(message);
-            return;
         } else if (item.explosiveness > 0.5f) {
             Block block = tile.block();
             if (block instanceof ItemLiquidGenerator) {
                 String message = "[scarlet]WARNING[] " + formatPlayer(targetPlayer) + " transfers [accent]" +
                     amount + "[] blast to a generator. " + formatTile(tile);
                 sendMessage(message);
-                return;
+            } else if (block instanceof Vault) {
+                String message = "[scarlet]WARNING[] " + formatPlayer(targetPlayer) + " transfers [accent]" +
+                        amount + "[] blast to a Vault. " + formatTile(tile);
+                sendMessage(message);
             } else if (block instanceof StorageBlock) {
                 String message = "[scarlet]WARNING[] " + formatPlayer(targetPlayer) + " transfers [accent]" +
                     amount + "[] blast to a Container. " + formatTile(tile);
                 sendMessage(message);
-                return;
-            } else if (block instanceof Vault) {
-                String message = "[scarlet]WARNING[] " + formatPlayer(targetPlayer) + " transfers [accent]" +
-                    amount + "[] blast to a Vault. " + formatTile(tile);
-                sendMessage(message);
-                return;
             }
         }
     }
@@ -339,7 +339,12 @@ public class GriefWarnings {
         Player targetPlayer = playerGroup.getByID(playerId);
         // System.out.println("player disconnect: " + targetPlayer.name + "#" + targetPlayer.id);
         PlayerStats stats = playerStats.get(targetPlayer);
-        if (stats != null) stats.gone = true;
+        if (stats != null) {
+            stats.gone = true;
+            String traceString = "";
+            if (stats.trace != null) traceString = " " + formatTrace(stats.trace);
+            sendLocal("[accent]Player leave:[] " + formatPlayer(targetPlayer) + traceString);
+        }
     }
 
     public void handleWorldDataBegin() {

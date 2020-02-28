@@ -24,8 +24,7 @@ public class FixGrief {
             powerNodeLaserLengthField = powerNodeClass.getDeclaredField("laserRange");
             powerNodeLaserLengthField.setAccessible(true);
         } catch (Exception ex) {
-            System.out.println(ex);
-            throw new RuntimeException("Unable to set up reflective access to PowerNode laserRange field");
+            throw new RuntimeException("Unable to set up reflective access to PowerNode laserRange field", ex);
         }
     }
 
@@ -79,6 +78,7 @@ public class FixGrief {
     public void fixPower(boolean redundant) {
         iterateAllTiles(tile -> {
             if (!(tile.block() instanceof PowerNode)) return;
+            if (tile.getTeam() != player.getTeam()) return;
             getPotentialPowerLinks(tile, redundant, link -> {
                 int value = link.pos();
                 boolean contains = tile.entity.power.links.contains(value);

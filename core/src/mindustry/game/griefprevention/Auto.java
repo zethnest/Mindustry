@@ -1,11 +1,13 @@
 package mindustry.game.griefprevention;
 
+import arc.Core;
 import arc.struct.Queue;
 import arc.math.Angles;
 import arc.math.Mathf;
 import arc.math.geom.Vec2;
 import arc.util.Interval;
 import arc.util.Time;
+import arc.util.Tmp;
 import mindustry.content.Blocks;
 import mindustry.entities.traits.BuilderTrait;
 import mindustry.entities.traits.BuilderTrait.BuildRequest;
@@ -14,6 +16,7 @@ import mindustry.entities.type.SolidEntity;
 import mindustry.entities.type.TileEntity;
 import mindustry.entities.type.Unit;
 import mindustry.gen.Call;
+import mindustry.input.Binding;
 import mindustry.type.Item;
 import mindustry.type.ItemStack;
 import mindustry.type.ItemType;
@@ -23,6 +26,7 @@ import mindustry.world.modules.ItemModule;
 
 import java.lang.reflect.Field;
 
+import static arc.Core.camera;
 import static mindustry.Vars.*;
 
 /* Auto mode */
@@ -36,11 +40,13 @@ public class Auto {
     public Mode mode;
     public boolean persist = false;
     public float targetDistance = 0.0f;
+    public boolean freecam = false;
 
     public Tile targetTile;
     public Unit targetEntity;
     public Tile targetItemSource;
     public Tile autoDumpTarget;
+    public Vec2 cameraTarget = new Vec2();
 
     public float targetEntityLastRotation;
 
@@ -53,6 +59,7 @@ public class Auto {
 
     public boolean movementControlled = false;
     public boolean shootControlled = false;
+    public boolean overrideCamera = false;
 
     public boolean wasAutoShooting = false;
 
@@ -137,12 +144,37 @@ public class Auto {
         return true;
     }
 
+    public void setFreecam(boolean enable) {
+        setFreecam(enable, player.x, player.y);
+    }
+
+    public void setFreecam(boolean enable, float x, float y) {
+        if (enable) {
+            cameraTarget.set(x, y);
+            freecam = true;
+        } else {
+            freecam = false;
+        }
+    }
+
+    /** whether default camera handling should be disabled */
+    public boolean cameraOverride() {
+        return overrideCamera || freecam;
+    }
+
+    /** whether default movement handling should be disabled */
+    public boolean movementOverride() {
+        return freecam;
+    }
+
     public void update() {
         if (!enabled) return;
 
         updateItemSourceTracking();
         updateAutoDump();
         updateMovement();
+        updateCamera();
+        updateControls();
     }
 
     public void updateAutoDump() {
@@ -164,6 +196,7 @@ public class Auto {
     public void updateItemSourceTracking() {
         if (targetItemSource == null) return;
         if (targetItemSource.block() != Blocks.itemSource) {
+            griefWarnings.sendMessage("[gray]Notice[] Item source " + griefWarnings.formatTile(targetItemSource) + " gone");
             targetItemSource = null;
             return;
         }
@@ -301,6 +334,26 @@ public class Auto {
         player.updateVelocityStatus();
     }
 
+    /** Custom camera handling, if enabled */
+    public void updateCamera() {
+        if (!cameraOverride()) return;
+        if (freecam && !ui.chatfrag.shown()) {
+            float camSpeed = !Core.input.keyDown(Binding.dash) ? 10f : 25f;
+            cameraTarget.add(Tmp.v1.setZero().add(Core.input.axis(Binding.move_x), Core.input.axis(Binding.move_y)).nor().scl(Time.delta() * camSpeed));
+
+            if(Core.input.keyDown(Binding.mouse_move)){
+                cameraTarget.x += Mathf.clamp((Core.input.mouseX() - Core.graphics.getWidth() / 2f) * 0.005f, -1, 1) * camSpeed;
+                cameraTarget.y += Mathf.clamp((Core.input.mouseY() - Core.graphics.getHeight() / 2f) * 0.005f, -1, 1) * camSpeed;
+            }
+        }
+
+        camera.position.lerpDelta(cameraTarget, 0.08f);
+    }
+
+    public void updateControls() {
+        if (Core.input.keyTap(Binding.freecam)) setFreecam(!freecam);
+    }
+
     /** Perform necessary cleanup after stopping */
     public void cancelMovement() {
         movementActive = false;
@@ -316,6 +369,7 @@ public class Auto {
         cancelMovement();
         targetItemSource = null;
         autoDumpTarget = null;
+        overrideCamera = false;
     }
 
     public void handlePlayerShoot(Player target, float offsetX, float offsetY, float rotation) {

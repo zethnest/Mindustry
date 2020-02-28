@@ -20,7 +20,7 @@ public class Scripts implements Disposable{
         "runtime", "util.os", "rmi", "security", "org.", "sun.", "beans", "sql", "http", "exec", "compiler", "process", "system",
         ".awt", "socket", "classloader", "oracle", "invoke");
     private final Array<String> whitelist = Array.with("mindustry.net");
-    private final Context context;
+    public final Context context;
     private Scriptable scope;
     private boolean errored;
     private LoadedMod currentMod = null;
@@ -41,7 +41,6 @@ public class Scripts implements Disposable{
         if(!run(Core.files.internal("scripts/global.js").readString(), "global.js")){
             errored = true;
         }
-        Context.exit();
         Log.debug("Time to load script engine: {0}", Time.elapsed());
     }
 
@@ -50,9 +49,8 @@ public class Scripts implements Disposable{
     }
 
     public String runConsole(String text){
-        Context ctx = Vars.platform.enterScriptContext(context);
         try{
-            Object o = ctx.evaluateString(scope, text, "console.js", 1, null);
+            Object o = context.evaluateString(scope, text, "console.js", 1, null);
             if(o instanceof NativeJavaObject){
                 o = ((NativeJavaObject)o).unwrap();
             }
@@ -62,8 +60,6 @@ public class Scripts implements Disposable{
             return String.valueOf(o);
         }catch(Throwable t){
             return getError(t);
-        }finally{
-            Context.exit();
         }
     }
 
@@ -87,25 +83,22 @@ public class Scripts implements Disposable{
     }
 
     private boolean run(String script, String file){
-        Context ctx = Vars.platform.enterScriptContext(context);
         try{
             if(currentMod != null){
                 //inject script info into file (TODO maybe rhino handles this?)
-                ctx.evaluateString(scope, "modName = \"" + currentMod.name + "\"\nscriptName = \"" + file + "\"", "initscript.js", 1, null);
+                context.evaluateString(scope, "modName = \"" + currentMod.name + "\"\nscriptName = \"" + file + "\"", "initscript.js", 1, null);
             }
-            ctx.evaluateString(scope, script, file, 1, null);
+            context.evaluateString(scope, script, file, 1, null);
             return true;
         }catch(Throwable t){
             log(LogLevel.err, file, "" + getError(t));
             return false;
-        }finally{
-            Context.exit();
         }
     }
 
     @Override
     public void dispose(){
-        // do nothing
+        Context.exit();
     }
 
     private class ScriptModuleProvider extends UrlModuleSourceProvider{
