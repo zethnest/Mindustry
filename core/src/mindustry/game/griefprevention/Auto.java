@@ -2,7 +2,6 @@ package mindustry.game.griefprevention;
 
 import arc.Core;
 import arc.struct.Queue;
-import arc.math.Angles;
 import arc.math.Mathf;
 import arc.math.geom.Vec2;
 import arc.util.Interval;
@@ -351,6 +350,7 @@ public class Auto {
     }
 
     public void updateControls() {
+        if (Core.scene.hasKeyboard()) return;
         if (Core.input.keyTap(Binding.freecam)) setFreecam(!freecam);
     }
 
