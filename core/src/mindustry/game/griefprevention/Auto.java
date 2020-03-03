@@ -30,9 +30,7 @@ import static mindustry.Vars.*;
 
 /* Auto mode */
 public class Auto {
-    public enum Mode {
-        GotoTile, GotoEntity, AssistEntity, UndoEntity
-    }
+    public enum Mode { GotoTile, GotoEntity, AssistEntity, UndoEntity }
 
     public boolean enabled = true;
     public boolean movementActive = false;
@@ -262,7 +260,7 @@ public class Auto {
                 player.isBoosting = false;
                 cancelMovement();
             }
-        } else {
+        } else if (!Core.input.keyDown(Binding.suspend_movement)) { // allow suspend of movement by holding down key
             player.isBoosting = true;
             movement.set(
                     (targetX - player.x) / Time.delta(),
@@ -274,9 +272,9 @@ public class Auto {
         }
 
         shootControlled = false;
+        assistBlock:
         if (mode == Mode.AssistEntity) {
-            boolean shouldContinue = true;
-            if (targetEntity instanceof Player && shouldContinue) {
+            if (targetEntity instanceof Player) {
                 Player targetPlayer = (Player)targetEntity;
                 // crappy is shooting logic
                 if (!targetPlayer.getTimer().check(targetPlayer.getShootTimer(false), targetPlayer.getWeapon().reload * 1.25f)) {
@@ -290,13 +288,13 @@ public class Auto {
                     float rotationDeg = targetEntityLastRotation * Mathf.degreesToRadians;
                     player.pointerX = player.getX() + 200 * Mathf.cos(rotationDeg);
                     player.pointerY = player.getY() + 200 * Mathf.sin(rotationDeg);
-                    shouldContinue = false;
+                    break assistBlock;
                 } else if (wasAutoShooting) {
                     player.isShooting = false;
                     wasAutoShooting = false;
                 }
             }
-            if (targetEntity instanceof BuilderTrait && shouldContinue) {
+            if (targetEntity instanceof BuilderTrait) {
                 BuilderTrait targetBuildEntity = (BuilderTrait)targetEntity;
                 BuildRequest targetRequest = targetBuildEntity.buildRequest();
                 if (targetRequest != null) {
@@ -305,7 +303,7 @@ public class Auto {
                     buildQueue.addFirst(targetRequest);
                     player.isBuilding = true;
                     player.isShooting = false;
-                    shouldContinue = false;
+                    break assistBlock;
                 }
             }
         } else if (mode == Mode.UndoEntity) {

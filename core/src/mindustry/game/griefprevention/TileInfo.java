@@ -6,13 +6,14 @@ import mindustry.world.Block;
 
 public class TileInfo implements Cloneable {
     public Player constructedBy;
-    // deconstructedBy ambiguously holds possibly either someone whp attempted to deconstruct
+    // deconstructedBy ambiguously holds possibly either someone who attempted to deconstruct
     // the current block or the person who deconstructed the previous block
-    // TODO: implement full block history
     public Player deconstructedBy;
     public boolean constructSeen = false;
     public boolean deconstructSeen = false;
     public Block previousBlock;
+    public int previousRotation;
+    public int previousConfig;
     public Block currentBlock;
     public int configureCount = 0;
     public ObjectSet<Player> interactedPlayers = new ObjectSet<>();
@@ -48,6 +49,8 @@ public class TileInfo implements Cloneable {
         if (link == null) return;
         // this is called after previousBlock is set on primary
         previousBlock = link.previousBlock;
+        previousRotation = link.previousRotation;
+        previousConfig = link.previousConfig;
         constructedBy = link.constructedBy;
         deconstructedBy = link.deconstructedBy;
         reset();

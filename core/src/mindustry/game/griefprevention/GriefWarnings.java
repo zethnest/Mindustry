@@ -14,18 +14,22 @@ import mindustry.entities.type.Unit;
 import mindustry.game.EventType.DepositEvent;
 import mindustry.game.EventType.ResetEvent;
 import mindustry.game.EventType.TileChangeEvent;
+import mindustry.game.EventType.WithdrawEvent;
 import mindustry.gen.Call;
 import mindustry.net.Administration.TraceInfo;
 import mindustry.net.Packets.AdminAction;
 import mindustry.type.Item;
 import mindustry.world.Block;
 import mindustry.world.Tile;
-import mindustry.world.blocks.distribution.MassDriver;
 import mindustry.world.blocks.distribution.Sorter;
 import mindustry.world.blocks.power.ItemLiquidGenerator;
 import mindustry.world.blocks.power.NuclearReactor;
 import mindustry.world.blocks.power.PowerGraph;
+import mindustry.world.blocks.power.PowerNode;
+import mindustry.world.blocks.sandbox.ItemSource;
+import mindustry.world.blocks.sandbox.LiquidSource;
 import mindustry.world.blocks.storage.StorageBlock;
+import mindustry.world.blocks.storage.Unloader;
 import mindustry.world.blocks.storage.Vault;
 
 import static mindustry.Vars.*;
@@ -50,14 +54,18 @@ public class GriefWarnings {
     public boolean autoban = false;
     /** whether to automatically perform an admin trace on player joins */
     public boolean autotrace = true;
+    /** whether to log every action captured by the action log */
+    public boolean logActions = false;
 
     public CommandHandler commandHandler = new CommandHandler();
     public FixGrief fixer = new FixGrief();
     public Auto auto;
     public RefList refs = new RefList();
+    public ActionLog actionLog = new ActionLog();
 
     public GriefWarnings() {
         Events.on(DepositEvent.class, this::handleDeposit);
+        Events.on(WithdrawEvent.class, this::handleWithdraw);
         Events.on(TileChangeEvent.class, this::handleTileChange);
         Events.on(ResetEvent.class, this::reset);
 
@@ -71,6 +79,7 @@ public class GriefWarnings {
         tileInfoHud = Core.settings.getBool("griefwarnings.tileinfohud", true);
         autoban = Core.settings.getBool("griefwarnings.autoban", false);
         autotrace = Core.settings.getBool("griefwarnings.autotrace", true);
+        logActions = Core.settings.getBool("griefwarnings.logactions", false);
     }
 
     public void saveSettings() {
@@ -80,6 +89,7 @@ public class GriefWarnings {
         Core.settings.put("griefwarnings.tileinfohud", tileInfoHud);
         Core.settings.put("griefwarnings.autoban", autoban);
         Core.settings.put("griefwarnings.autotrace", autotrace);
+        Core.settings.put("griefwarnings.logactions", logActions);
         Core.settings.save();
     }
 
@@ -127,6 +137,7 @@ public class GriefWarnings {
         tileInfo.clear();
         playerStats.clear();
         refs.reset();
+        actionLog.reset();
         if (auto != null) auto.reset();
     }
 
@@ -161,13 +172,28 @@ public class GriefWarnings {
             if (player.isAdmin && autotrace) {
                 stats.doTrace(trace -> {
                     sendLocal("[accent]Player join:[] " + formatPlayer(target) + " " + formatTrace(trace));
-                    Log.info("[antigrief] Player join: " + target.name + " (" + player.id+ ") " + formatTrace(trace));
+                    Log.infoTag("antigrief", "Player join: " + target.name + " (" + player.id+ ") " + formatTrace(trace));
                 });
             } else {
                 sendLocal("[accent]Player join:[] " + formatPlayer(target));
             }
         }
         return stats;
+    }
+
+    // these are called before the BuildBlock is placed so tile contains the previous block
+    public void handleBeginBreak(Tile tile) {
+        TileInfo info = getOrCreateTileInfo(tile);
+        info.previousBlock = tile.block();
+        info.previousRotation = tile.rotation();
+        info.previousConfig = (tile.entity != null) ? tile.entity.config() : -1;
+    }
+
+    public void handleBeginPlace(Tile tile, Block result, int rotation) {
+        TileInfo info = getOrCreateTileInfo(tile);
+        info.previousBlock = tile.block();
+        info.previousRotation = tile.rotation();
+        info.previousConfig = (tile.entity != null) ? tile.entity.config() : -1;
     }
 
     public void handleBlockConstructProgress(Player builder, Tile tile, Block cblock, float progress, Block previous) {
@@ -192,10 +218,17 @@ public class GriefWarnings {
 
         // one-time block construction warnings
         if (!info.constructSeen) {
-            if (previous != null && previous != Blocks.air) info.previousBlock = previous;
             tile.getLinkedTiles(linked -> getOrCreateTileInfo(linked, false).doLink(info));
             info.constructSeen = true;
             info.currentBlock = cblock;
+
+            Actions.Construct action = new Actions.Construct(builder, tile);
+            action.previousBlock = info.previousBlock;
+            action.previousRotation = info.previousRotation;
+            action.previousConfig = info.previousConfig;
+            action.constructBlock = cblock;
+            action.constructRotation = tile.rotation();
+            actionLog.add(action);
 
             if (!didWarn) {
                 if (cblock instanceof NuclearReactor) {
@@ -216,13 +249,6 @@ public class GriefWarnings {
                         sendMessage(message, false);
                     }
                 }
-                /* doesn't seem very necessary for now
-                if (cblock instanceof Fracker) {
-                    String message = "[lightgray]Notice[] " + formatPlayer(builder) +
-                        " is building an oil extractor at " + formatTile(tile);
-                    sendMessage(message, false);
-                }
-                */
             }
         }
     }
@@ -251,6 +277,12 @@ public class GriefWarnings {
 
         if (!info.deconstructSeen) {
             info.deconstructSeen = true;
+
+            Actions.Deconstruct action = new Actions.Deconstruct(builder, tile);
+            action.previousBlock = info.previousBlock;
+            action.previousRotation = info.previousRotation;
+            action.previousConfig = info.previousConfig;
+            actionLog.add(action);
         }
     }
 
@@ -260,7 +292,6 @@ public class GriefWarnings {
         Player targetPlayer = playerGroup.getByID(builderId);
         if (targetPlayer != null) info.deconstructedBy = targetPlayer;
         info.reset();
-        info.previousBlock = block;
         tile.getLinkedTiles(linked -> getOrCreateTileInfo(linked, false).unlink());
 
         if (targetPlayer != null) {
@@ -304,6 +335,12 @@ public class GriefWarnings {
             sendMessage("[green]Verbose[] " + targetPlayer.name + "[white] ([stat]#" + targetPlayer.id +
                 "[]) transfers " + amount + " " + item.name + " to " + tile.block().name + " " + formatTile(tile), false);
         }
+
+        Actions.DepositItems action = new Actions.DepositItems(targetPlayer, tile);
+        action.item = item;
+        action.amount = amount;
+        actionLog.add(action);
+
         if (item.equals(Items.thorium) && tile.block() instanceof NuclearReactor) {
             String message = "[scarlet]WARNING[] " + targetPlayer.name + "[white] ([stat]#" +
                 targetPlayer.id + "[]) transfers [accent]" + amount + "[] thorium to a reactor. " + formatTile(tile);
@@ -324,6 +361,13 @@ public class GriefWarnings {
                 sendMessage(message);
             }
         }
+    }
+
+    public void handleWithdraw(WithdrawEvent event) {
+        Actions.WithdrawItems action = new Actions.WithdrawItems(event.player, event.tile);
+        action.item = event.item;
+        action.amount = event.amount;
+        actionLog.add(action);
     }
 
     public void handlePlayerEntitySnapshot(Player targetPlayer) {
@@ -418,20 +462,26 @@ public class GriefWarnings {
         }
 
         Block block = tile.block();
-        if (block instanceof Sorter) {
-            Item oldItem = tile.<Sorter.SorterEntity>ent().sortItem;
-            Item newItem = content.item(value);
-            if (verbose) {
-                sendMessage("[green]Verbose[] " + formatPlayer(targetPlayer) + " configures sorter " +
-                    formatItem(oldItem) + " -> " + formatItem(newItem) + " " + formatTile(tile));
-            }
-        } else if (block instanceof MassDriver) {
-            Tile oldLink = world.tile(tile.<MassDriver.MassDriverEntity>ent().link);
-            Tile newLink = world.tile(value);
-            if (verbose) {
-                sendMessage("[green]Verbose[] " + formatPlayer(targetPlayer) + " configures mass driver at " +
-                    formatTile(tile) + " from " + formatTile(oldLink) + " to " + formatTile(newLink));
-            }
+        if (block.posConfig) {
+            Actions.ConfigurePositional action = new Actions.ConfigurePositional(targetPlayer, tile);
+            action.targetBlock = tile.block();
+            action.beforeConfig = tile.entity.config();
+            action.afterConfig = value;
+            actionLog.add(action);
+        } else if (block instanceof ItemSource || // excuse hard coded values
+                block instanceof Sorter ||
+                block instanceof Unloader ||
+                block instanceof LiquidSource) {
+            Actions.ConfigureItemSelect action = new Actions.ConfigureItemSelect(targetPlayer, tile);
+            action.targetBlock = tile.block();
+            action.beforeConfig = tile.entity.config();
+            action.afterConfig = value;
+            actionLog.add(action);
+        } else if (block instanceof PowerNode) {
+            Actions.ConfigurePowerNode action = new Actions.ConfigurePowerNode(targetPlayer, tile);
+            action.disconnect = tile.entity.power.links.contains(value); // should never be null, if not then oh no
+            action.other = value;
+            actionLog.add(action);
         }
     }
     
@@ -452,6 +502,19 @@ public class GriefWarnings {
             sendMessage("[green]Verbose[] " + formatPlayer(targetPlayer) + " rotates " +
                 tile.block().name + " at " + formatTile(tile));
         }
+
+        Actions.RotateBlock action = new Actions.RotateBlock(targetPlayer, tile);
+        action.targetBlock = tile.block();
+        action.beforeRotation = tile.rotation();
+        action.direction = direction;
+        actionLog.add(action);
+    }
+
+    public void handleTileTapped(Player target, Tile tile) {
+        /* this is not a good idea
+        Actions.TapTile action = new Actions.TapTile(target, tile);
+        actionLog.add(action);
+        */
     }
 
     public void handleThoriumReactorHeat(Tile tile, float heat) {

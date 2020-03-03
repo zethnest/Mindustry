@@ -32,6 +32,8 @@ public class Build{
             prevPercent = tile.entity.healthf();
         }
 
+        griefWarnings.handleBeginBreak(tile);
+
         int rotation = tile.rotation();
         Block previous = tile.block();
         Block sub = BuildBlock.get(previous.size);
@@ -54,6 +56,8 @@ public class Build{
 
         //just in case
         if(tile == null) return;
+
+        griefWarnings.handleBeginPlace(tile, result, rotation);
 
         Block previous = tile.block();
         Block sub = BuildBlock.get(result.size);

@@ -6,6 +6,9 @@ import arc.struct.Array;
 import arc.func.Cons;
 import arc.util.Log;
 import mindustry.entities.type.Player;
+import mindustry.game.griefprevention.Actions.Action;
+import mindustry.game.griefprevention.Actions.TileAction;
+import mindustry.game.griefprevention.Actions.UndoResult;
 import mindustry.gen.Call;
 import mindustry.net.Packets.AdminAction;
 import mindustry.world.Block;
@@ -57,6 +60,9 @@ public class CommandHandler {
         addCommand("eval", this::eval);
         addCommand("freecam", createToggle("freecam", "free movement of camera", v -> griefWarnings.auto.setFreecam(v)));
         addCommand("show", this::show);
+        addCommand("logactions", settingsToggle("logactions", "log all actions captured by the action log", v -> griefWarnings.logActions = v));
+        addCommand("getactions", this::getactions);
+        addCommand("undoactions", this::undoactions);
 
         // mods context not yet initialized here
         scriptContext = scriptContextFactory.enterContext();
@@ -363,15 +369,23 @@ public class CommandHandler {
             case "goto": {
                 if (ctx.args.size() < 4) {
                     reply("[scarlet]Not enough arguments");
-                    reply("Usage: auto goto <x> <y>");
+                    reply("Usage: auto goto [persist] <x> <y>");
                     return;
                 }
-                Tile tile = findTile(ctx.args.get(2), ctx.args.get(3));
+                int argStart = 2;
+                boolean persist = false;
+                String additional = ctx.args.get(argStart).toLowerCase();
+                if (additional.equals("persist")) {
+                    argStart++;
+                    persist = true;
+                }
+                Tile tile = findTile(ctx.args.get(argStart), ctx.args.get(argStart + 1));
                 if (tile == null) {
                     reply("[scarlet]Invalid tile");
                     return;
                 }
-                auto.gotoTile(tile, 50f);
+                auto.gotoTile(tile, persist ? 0f : 50f);
+                auto.persist = persist;
                 reply("going to tile " + griefWarnings.formatTile(tile));
                 break;
             }
@@ -531,5 +545,71 @@ public class CommandHandler {
 
         reply("Showing player " + griefWarnings.formatPlayer(target));
         griefWarnings.auto.setFreecam(true, target.x, target.y);
+    }
+
+    /** Show action logs relevant to tile or player */
+    public void getactions(CommandContext ctx) {
+        if (ctx.args.size() < 2) {
+            reply("No target given");
+            return;
+        }
+
+        if (ctx.args.size() == 3) {
+            Tile tile = findTile(ctx.args.get(1), ctx.args.get(2));
+            if (tile != null) {
+                reply("Showing actions for tile " + griefWarnings.formatTile(tile));
+                Array<TileAction> actions = griefWarnings.actionLog.getActions(tile);
+                // print backwards
+                for (int i = actions.size - 1; i >= 0; i--) {
+                    reply(actions.get(i).toString());
+                }
+                return;
+            }
+        }
+
+        String name = String.join(" ", ctx.args.subList(1, ctx.args.size()));
+        Player target = getPlayer(name);
+        if (target == null) {
+            reply("Target does not exist");
+            return;
+        }
+
+        Array<Action> actions = griefWarnings.actionLog.getActions(target);
+        for (int i = actions.size - 1; i >= 0; i--) {
+            reply(actions.get(i).toString());
+        }
+    }
+
+    /** Undo actions of player */
+    public void undoactions(CommandContext ctx) {
+        if (ctx.args.size() < 2) {
+            reply("No target given");
+            return;
+        }
+
+        int count = -1;
+        if (ctx.args.size() > 2) {
+            try {
+                count = Integer.parseInt(ctx.args.get(1));
+            } catch (NumberFormatException ex) {
+                // ignore
+            }
+        }
+
+        int argStart = count > -1 ? 2 : 1;
+        String name = String.join(" ", ctx.args.subList(argStart, ctx.args.size()));
+        Player target = getPlayer(name);
+        if (target == null) {
+            reply("Invalid target");
+            return;
+        }
+
+        Array<Action> actions = griefWarnings.actionLog.getActions(target);
+        int j = 0;
+        for (Action action : actions) {
+            reply("[green]Undo:[] " + action.toString());
+            if (action.undo() == UndoResult.mismatch) reply("[scarlet]mismatch");
+            if (count > 0 && ++j >= count) break;
+        }
     }
 }

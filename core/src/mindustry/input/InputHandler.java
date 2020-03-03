@@ -158,6 +158,7 @@ public abstract class InputHandler implements InputProcessor, GestureListener{
         if(tile == null || player == null) return;
         if(net.server() && (!Units.canInteract(player, tile) ||
             !netServer.admins.allowAction(player, ActionType.tapTile, tile, action -> {}))) throw new ValidateException(player, "Player cannot tap a tile.");
+        griefWarnings.handleTileTapped(player, tile);
         tile.block().tapped(tile, player);
         Core.app.post(() -> Events.fire(new TapEvent(tile, player)));
     }
