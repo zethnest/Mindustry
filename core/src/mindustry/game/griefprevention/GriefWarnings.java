@@ -261,6 +261,16 @@ public class GriefWarnings {
         info.currentBlock = block;
 
         if (targetPlayer != null) {
+            if (!info.constructSeen) {
+                Actions.Construct action = new Actions.Construct(targetPlayer, tile);
+                action.previousBlock = info.previousBlock;
+                action.previousRotation = info.previousRotation;
+                action.previousConfig = info.previousConfig;
+                action.constructBlock = tile.block();
+                action.constructRotation = tile.rotation();
+                actionLog.add(action);
+            }
+
             PlayerStats stats = getOrCreatePlayerStats(targetPlayer);
             stats.blocksConstructed++;
 
@@ -295,6 +305,14 @@ public class GriefWarnings {
         tile.getLinkedTiles(linked -> getOrCreateTileInfo(linked, false).unlink());
 
         if (targetPlayer != null) {
+            if (!info.deconstructSeen) {
+                Actions.Deconstruct action = new Actions.Deconstruct(targetPlayer, tile);
+                action.previousBlock = info.previousBlock;
+                action.previousRotation = info.previousRotation;
+                action.previousConfig = info.previousConfig;
+                actionLog.add(action);
+            }
+
             PlayerStats stats = getOrCreatePlayerStats(targetPlayer);
             stats.blocksBroken++;
 
