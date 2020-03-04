@@ -83,7 +83,7 @@ public class Weapon{
         }
 
         shootDirect(player, x, y, rotation, left);
-        griefWarnings.auto.handlePlayerShoot(player, x, y, rotation);
+        if (griefWarnings.auto != null) griefWarnings.auto.handlePlayerShoot(player, x, y, rotation);
     }
 
     @Remote(targets = Loc.server, called = Loc.both, unreliable = true)

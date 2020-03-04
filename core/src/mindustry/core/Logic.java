@@ -248,7 +248,7 @@ public class Logic implements ApplicationListener{
 
 
                 playerGroup.update();
-                griefWarnings.auto.update();
+                if (griefWarnings.auto != null) griefWarnings.auto.update();
 
                 //effect group only contains item transfers in the headless version, update it!
                 if(headless){

@@ -43,13 +43,16 @@ public class Auto {
     public Unit targetEntity;
     public Tile targetItemSource;
     public Tile autoDumpTarget;
+    public Tile autoPickupTarget;
+    public Item autoPickupTargetItem;
     public Vec2 cameraTarget = new Vec2();
 
     public float targetEntityLastRotation;
 
-    public Interval timer = new Interval(2);
+    public Interval timer = new Interval(3);
     public static final int votekickWaitTimer = 0;
     public static final int itemTransferTimer = 1;
+    public static final int requestItemTimer = 2;
 
     public Vec2 movement;
     public Vec2 velocity;
@@ -141,6 +144,18 @@ public class Auto {
         return true;
     }
 
+    public boolean setAutoPickupTarget(Tile tile, Item item) {
+        if (tile == null) {
+            autoPickupTarget = null;
+            autoPickupTargetItem = null;
+            return true;
+        }
+        if (!tile.block().hasItems || !tile.interactable(player.getTeam())) return false;
+        autoPickupTarget = tile;
+        autoPickupTargetItem = item;
+        return true;
+    }
+
     public void setFreecam(boolean enable) {
         setFreecam(enable, player.x, player.y);
     }
@@ -169,6 +184,7 @@ public class Auto {
 
         updateItemSourceTracking();
         updateAutoDump();
+        updateAutoPickup();
         updateMovement();
         updateCamera();
         updateControls();
@@ -182,12 +198,30 @@ public class Auto {
             return;
         }
         ItemStack stack = player.item();
-        if (timer.get(itemTransferTimer, 50)) return;
+        // if (!timer.get(itemTransferTimer, 50)) return;
         if (stack.amount > 0 &&
                 tile.block().acceptStack(stack.item, stack.amount, tile, player) > 0 &&
                 !player.isTransferring) {
             Call.transferInventory(player, tile);
         }
+    }
+
+    public void updateAutoPickup() {
+        Tile tile = autoPickupTarget;
+        Item item = autoPickupTargetItem;
+        if (tile == null || !tile.block().hasItems || !tile.interactable(player.getTeam()) || item == null) {
+            // tile doesn't accept items, reset the thing
+            autoPickupTarget = null;
+            autoPickupTargetItem = null;
+            return;
+        }
+        ItemStack stack = player.item();
+        if (stack.amount > 0 && stack.item != item) return;
+        int amount = player.mech.itemCapacity - stack.amount;
+        amount = Math.min(amount, tile.entity.items.get(item));
+        if (amount == 0) return;
+        // if (!timer.get(requestItemTimer, 50)) return;
+        Call.requestItem(player, tile, item, amount);
     }
 
     public void updateItemSourceTracking() {
@@ -367,6 +401,7 @@ public class Auto {
         cancelMovement();
         targetItemSource = null;
         autoDumpTarget = null;
+        autoPickupTarget = null;
         overrideCamera = false;
     }
 

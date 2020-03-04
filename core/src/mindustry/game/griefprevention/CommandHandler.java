@@ -11,6 +11,7 @@ import mindustry.game.griefprevention.Actions.TileAction;
 import mindustry.game.griefprevention.Actions.UndoResult;
 import mindustry.gen.Call;
 import mindustry.net.Packets.AdminAction;
+import mindustry.type.Item;
 import mindustry.world.Block;
 import mindustry.world.Tile;
 import mindustry.world.blocks.BlockPart;
@@ -348,7 +349,7 @@ public class CommandHandler {
     public void auto(CommandContext ctx) {
         if (ctx.args.size() < 2) {
             reply("[scarlet]Not enough arguments");
-            reply("Usage: auto <on|off|cancel|gotocore|gotoplayer|goto|distance|itemsource>");
+            reply("Usage: auto <on|off|cancel|gotocore|gotoplayer|goto|distance|itemsource|dumptarget|pickuptarget>");
             return;
         }
         Auto auto = griefWarnings.auto;
@@ -472,16 +473,19 @@ public class CommandHandler {
                 break;
             }
             case "dumptarget": {
+                // usage: /auto dumptarget [<x> <y>]
+                Tile tile = null;
                 if (ctx.args.size() == 3) {
                     if (ctx.args.get(2).toLowerCase().equals("reset")) {
                         auto.setAutoDumpTransferTarget(null);
                         reply("reset autodump target");
                         return;
                     }
-                }
-                Tile tile = getCursorTile();
+                } else if (ctx.args.size() == 4) {
+                    tile = findTile(ctx.args.get(2), ctx.args.get(3));
+                } else tile = getCursorTile();
                 if (tile == null) {
-                    reply("cursor is not on a tile");
+                    reply("cursor is not on a tile or invalid tile specified");
                     return;
                 }
                 if (tile.isLinked()) tile = tile.link();
@@ -490,6 +494,42 @@ public class CommandHandler {
                     return;
                 }
                 reply("automatically dumping player inventory to tile " + griefWarnings.formatTile(tile));
+                break;
+            }
+            case "pickuptarget": {
+                // usage: /auto pickuptarget [<x> <y>] <item>
+                Item item;
+                Tile tile;
+                if (ctx.args.size() == 3) {
+                    if (ctx.args.get(2).toLowerCase().equals("reset")) {
+                        auto.setAutoPickupTarget(null, null);
+                        reply("reset autopickup target");
+                        return;
+                    }
+
+                    item = content.items().find(a -> a.name.equals(ctx.args.get(2)));
+                    tile = getCursorTile();
+                } else if (ctx.args.size() == 5) {
+                    item = content.items().find(a -> a.name.equals(ctx.args.get(4)));
+                    tile = findTile(ctx.args.get(2), ctx.args.get(3));
+                } else {
+                    reply("invalid arguments");
+                    return;
+                }
+                if (item == null) {
+                    reply("invalid item provided");
+                    return;
+                }
+                if (tile == null) {
+                    reply("cursor is not on a tile");
+                    return;
+                }
+                if (tile.isLinked()) tile = tile.link();
+                if (!auto.setAutoPickupTarget(tile, item)) {
+                    reply("target does not seem valid");
+                    return;
+                }
+                reply("automatically picking up item " + item.name + " from tile " + griefWarnings.formatTile(tile));
                 break;
             }
             default:
