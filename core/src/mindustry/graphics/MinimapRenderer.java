@@ -95,8 +95,8 @@ public class MinimapRenderer implements Disposable{
 			if(unit instanceof Player && ((Player) unit).isLocal){
 				Draw.mixcol(Color.valueOf("#000000"), 1f);
 				float scale = Scl.scl(1f) / 2f * scaling * 1.2f * 32f;
-            	Draw.rect(unit.getIconRegion(), x + rx, y + ry, scale, scale, unit.rotation - 90);
-            	Draw.reset();
+				Draw.rect(unit.getIconRegion(), x + rx, y + ry, scale, scale, unit.rotation - 90);
+				Draw.reset();
 			}
 
             Draw.mixcol(unit.getTeam().color, 1f);
