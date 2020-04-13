@@ -717,8 +717,8 @@ public class HudFragment extends Fragment{
                 t.addImage(item.icon(Cicon.small)).size(8 * 3).padLeft(4).padRight(4);
                 t.label(() -> {
 					builder.setLength(0);
-        			if(!state.is(State.menu) && player.getTeam().data().hasCore() && player.getTeam().core().items.get(item) > 0)
-            			builder.append(ui.formatAmount(state.teams.get(player.getTeam()).core().items.get(item)));
+					if(!state.is(State.menu) && player.getTeam().data().hasCore() && player.getTeam().core().items.get(item) > 0)
+						builder.append(ui.formatAmount(state.teams.get(player.getTeam()).core().items.get(item)));
 					else
 						builder.append("0");
 
