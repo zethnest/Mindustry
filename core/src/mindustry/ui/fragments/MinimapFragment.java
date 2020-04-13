@@ -8,6 +8,7 @@ import arc.math.*;
 import arc.scene.*;
 import arc.scene.event.*;
 import arc.scene.ui.layout.*;
+import arc.util.Log;
 import mindustry.gen.*;
 import mindustry.input.*;
 import mindustry.ui.*;
@@ -36,6 +37,12 @@ public class MinimapFragment extends Fragment{
                 TextureRegion reg = Draw.wrap(renderer.minimap.getTexture());
                 Draw.rect(reg, w/2f + panx*zoom, h/2f + pany*zoom, size, size * ratio);
                 renderer.minimap.drawEntities(w/2f + panx*zoom - size/2f, h/2f + pany*zoom - size/2f * ratio, size, size * ratio, zoom, true);
+				Log.info("panx,pany: " + ((Float) panx).toString() + "," + ((Float) pany).toString());
+				Log.info("world.toTile(player.{x,y}): " + ((Integer) world.toTile(player.x)).toString() + " , " + ((Integer) world.toTile(player.y)).toString());
+				Log.info("size: " + ((Float) size).toString());
+				Log.info("ratio: " + ((Float) ratio).toString());
+				Log.info("size*ratio: " + ((Float) (size * ratio)).toString());
+				Log.info("world.width(),world.height()" + ((Integer) world.width()).toString() + " , " + ((Integer) world.height()));
             }
 
             Draw.reset();
@@ -109,6 +116,8 @@ public class MinimapFragment extends Fragment{
     }
 
     public void toggle(){
+		panx = -((float) world.toTile(player.x) - (world.width()/2)) * 3.5f;
+		pany = -((float) world.toTile(player.y) - (world.height()/2)) * 3.5f;
         shown = !shown;
     }
 }
