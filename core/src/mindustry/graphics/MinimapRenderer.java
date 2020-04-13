@@ -92,6 +92,13 @@ public class MinimapRenderer implements Disposable{
             float rx = !withLabels ? (unit.x - rect.x) / rect.width * w : unit.x / (world.width() * tilesize) * w;
             float ry = !withLabels ? (unit.y - rect.y) / rect.width * h : unit.y / (world.height() * tilesize) * h;
 
+			if(unit instanceof Player && ((Player) unit).isLocal){
+				Draw.mixcol(Color.valueOf("#000000"), 1f);
+				float scale = Scl.scl(1f) / 2f * scaling * 1.2f * 32f;
+            	Draw.rect(unit.getIconRegion(), x + rx, y + ry, scale, scale, unit.rotation - 90);
+            	Draw.reset();
+			}
+
             Draw.mixcol(unit.getTeam().color, 1f);
             float scale = Scl.scl(1f) / 2f * scaling * 32f;
             Draw.rect(unit.getIconRegion(), x + rx, y + ry, scale, scale, unit.rotation - 90);
