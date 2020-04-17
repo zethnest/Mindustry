@@ -264,6 +264,24 @@ public class HudFragment extends Fragment{
             t.top().right();
         });
 
+		//inventory
+        parent.fill(cont -> {
+			cont.setName("inventory");
+			cont.center().left();
+
+			Table inventoryMain;
+
+			cont.stack(inventoryMain = new Table()).height(inventoryMain.getPrefHeight());
+			{
+				inventoryMain.visible(() -> true);
+				inventoryMain.center().left();
+				Table inventory = new Table();
+
+				addInventory(inventory);
+				inventoryMain.add(inventory);
+			}
+        });
+
         //spawner warning
         parent.fill(t -> {
             t.touchable(Touchable.disabled);
@@ -685,5 +703,29 @@ public class HudFragment extends Fragment{
             }
         }).growY().fillX().right().width(40f)
         .visible(this::canSkipWave);
+    }
+
+    private void addInventory(Table table){
+		StringBuilder builder = new StringBuilder();
+		table.clearChildren();
+
+		Array<Item> items = content.items();
+
+		table.table(Tex.buttonTrans, t -> {
+			for(Item item : items){
+                if(item.type != ItemType.material) continue;
+                t.addImage(item.icon(Cicon.small)).size(8 * 3).padLeft(4).padRight(4);
+                t.label(() -> {
+					builder.setLength(0);
+					if(!state.is(State.menu) && player.getTeam().data().hasCore() && player.getTeam().core().items.get(item) > 0)
+						builder.append(ui.formatAmount(state.teams.get(player.getTeam()).core().items.get(item)));
+					else
+						builder.append("0");
+
+					return builder;
+				}).minWidth(50f);
+                t.row();
+			}
+		});
     }
 }
