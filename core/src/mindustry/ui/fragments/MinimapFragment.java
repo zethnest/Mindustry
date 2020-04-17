@@ -109,6 +109,8 @@ public class MinimapFragment extends Fragment{
     }
 
     public void toggle(){
+		panx = -((float) world.toTile(player.x) - (world.width()/2)) * 3.5f;
+		pany = -((float) world.toTile(player.y) - (world.height()/2)) * 3.5f;
         shown = !shown;
     }
 }
