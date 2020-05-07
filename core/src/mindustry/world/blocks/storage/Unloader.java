@@ -12,7 +12,7 @@ import mindustry.world.blocks.*;
 
 import java.io.*;
 
-import static mindustry.Vars.content;
+import static mindustry.Vars.*;
 
 public class Unloader extends Block{
     public float speed = 1f;

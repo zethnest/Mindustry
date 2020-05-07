@@ -13,7 +13,7 @@ import mindustry.world.meta.*;
 
 import java.io.*;
 
-import static mindustry.Vars.content;
+import static mindustry.Vars.*;
 
 public class ItemSource extends Block{
     private static Item lastItem;
