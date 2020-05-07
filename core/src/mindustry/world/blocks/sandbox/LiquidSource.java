@@ -84,6 +84,18 @@ public class LiquidSource extends Block{
     }
 
     @Override
+    public boolean onConfigureTileTapped(Tile tile, Tile other){
+        if(tile == other){
+            lastLiquid = null;
+            tile.configure(-1);
+            control.input.frag.config.hideConfig();
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
     public void configured(Tile tile, Player player, int value){
         tile.<LiquidSourceEntity>ent().source = value == -1 ? null : content.liquid(value);
     }

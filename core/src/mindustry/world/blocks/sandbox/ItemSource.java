@@ -92,6 +92,18 @@ public class ItemSource extends Block{
         return false;
     }
 
+    @Override
+    public boolean onConfigureTileTapped(Tile tile, Tile other){
+        if(tile == other){
+            lastItem = null;
+            tile.configure(-1);
+            control.input.frag.config.hideConfig();
+            return false;
+        }
+
+        return true;
+    }
+
     public class ItemSourceEntity extends TileEntity{
         Item outputItem;
 
