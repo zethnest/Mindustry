@@ -1,6 +1,5 @@
 package mindustry.world.blocks.sandbox;
 
-import arc.*;
 import arc.graphics.g2d.*;
 import arc.scene.ui.layout.*;
 import arc.util.*;
@@ -12,10 +11,9 @@ import mindustry.world.*;
 import mindustry.world.blocks.*;
 import mindustry.world.meta.*;
 
-import static mindustry.Vars.content;
+import static mindustry.Vars.*;
 
 public class ItemSource extends Block{
-    private static Item lastItem;
 
     public ItemSource(String name){
         super(name);
@@ -24,6 +22,8 @@ public class ItemSource extends Block{
         solid = true;
         group = BlockGroup.transportation;
         configurable = true;
+        saveConfig = true;
+
         config(Item.class, (tile, item) -> ((ItemSourceEntity)tile).outputItem = item);
         configClear(tile -> ((ItemSourceEntity)tile).outputItem = null);
     }
@@ -48,13 +48,6 @@ public class ItemSource extends Block{
         Item outputItem;
 
         @Override
-        public void playerPlaced(){
-            if(lastItem != null){
-                Core.app.post(() -> tile.configure(lastItem));
-            }
-        }
-
-        @Override
         public void draw(){
             super.draw();
 
@@ -76,7 +69,18 @@ public class ItemSource extends Block{
 
         @Override
         public void buildConfiguration(Table table){
-            ItemSelection.buildTable(table, content.items(), () -> outputItem, item -> tile.configure(lastItem = item));
+            ItemSelection.buildTable(table, content.items(), () -> outputItem, item -> configure(item));
+        }
+
+        @Override
+        public boolean onConfigureTileTapped(Tilec other){
+            if(this == other){
+                deselect();
+                configure(null);
+                return false;
+            }
+
+            return true;
         }
 
         @Override

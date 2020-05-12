@@ -1,5 +1,7 @@
 package mindustry.io;
 
+import arc.*;
+import arc.math.geom.*;
 import arc.struct.*;
 import arc.util.*;
 import arc.util.io.*;
@@ -69,7 +71,9 @@ public abstract class SaveVersion extends SaveFileReader{
             "rules", JsonIO.write(state.rules),
             "mods", JsonIO.write(mods.getModStrings().toArray(String.class)),
             "width", world.width(),
-            "height", world.height()
+            "height", world.height(),
+            "viewpos", Tmp.v1.set(player == null ? Vec2.ZERO : player).toString(),
+            "controlledType", headless || control.input.controlledType == null ? "null" : control.input.controlledType.name
         ).merge(tags));
     }
 
@@ -82,6 +86,14 @@ public abstract class SaveVersion extends SaveFileReader{
         state.rules = JsonIO.read(Rules.class, map.get("rules", "{}"));
         if(state.rules.spawns.isEmpty()) state.rules.spawns = defaultWaves.get();
         lastReadBuild = map.getInt("build", -1);
+
+        if(!headless){
+            Tmp.v1.tryFromString(map.get("viewpos"));
+            Core.camera.position.set(Tmp.v1);
+            player.set(Tmp.v1);
+
+            control.input.controlledType = content.getByName(ContentType.unit, map.get("controlledType", "<none>"));
+        }
 
         Map worldmap = maps.byName(map.get("mapname", "\\\\\\"));
         state.map = worldmap == null ? new Map(StringMap.of(
@@ -184,7 +196,6 @@ public abstract class SaveVersion extends SaveFileReader{
 
             //read blocks
             for(int i = 0; i < width * height; i++){
-                int x = i % width, y = i / width;
                 Block block = content.block(stream.readShort());
                 Tile tile = context.tile(i);
                 if(block == null) block = Blocks.air;
@@ -230,7 +241,7 @@ public abstract class SaveVersion extends SaveFileReader{
         Array<TeamData> data = state.teams.getActive();
         stream.writeInt(data.size);
         for(TeamData team : data){
-            stream.writeInt((int)team.team.id);
+            stream.writeInt(team.team.id);
             stream.writeInt(team.brokenBlocks.size);
             for(BrokenBlock block : team.brokenBlocks){
                 stream.writeShort(block.x);
@@ -241,8 +252,8 @@ public abstract class SaveVersion extends SaveFileReader{
             }
         }
 
-        stream.writeInt(Groups.sync.count(Entityc::serialize));
-        for(Syncc entity : Groups.sync){
+        stream.writeInt(Groups.all.count(Entityc::serialize));
+        for(Entityc entity : Groups.all){
             if(!entity.serialize()) continue;
 
             writeChunk(stream, true, out -> {
@@ -267,9 +278,9 @@ public abstract class SaveVersion extends SaveFileReader{
         for(int j = 0; j < amount; j++){
             readChunk(stream, true, in -> {
                 byte typeid = in.readByte();
-                Syncc sync = (Syncc)EntityMapping.map(typeid).get();
-                sync.read(Reads.get(in));
-                sync.add();
+                Entityc entity = (Entityc)EntityMapping.map(typeid).get();
+                entity.read(Reads.get(in));
+                entity.add();
             });
         }
     }

@@ -49,17 +49,7 @@ public class PlanetDialog extends FloatingDialog{
     private Planet planet = Planets.starter;
     private @Nullable Sector selected, hovered;
     private Table stable;
-    private Mesh atmosphere = MeshBuilder.buildHex(new HexMesher(){
-        @Override
-        public float getHeight(Vec3 position){
-            return 0;
-        }
-
-        @Override
-        public Color getColor(Vec3 position){
-            return Color.white;
-        }
-    }, 2, false, 1.5f, 0f);
+    private Mesh atmosphere = MeshBuilder.buildHex(Color.white, 2, false, 1.5f);
 
     //seed: 8kmfuix03fw
     private CubemapMesh skybox = new CubemapMesh(new Cubemap("cubemaps/stars/"));
@@ -81,9 +71,7 @@ public class PlanetDialog extends FloatingDialog{
             }
         });
 
-        Events.on(ResizeEvent.class, e -> {
-            makeBloom();
-        });
+        Events.on(ResizeEvent.class, e -> makeBloom());
 
 
         buttons.defaults().size(220f, 64f).pad(0f);
@@ -92,7 +80,7 @@ public class PlanetDialog extends FloatingDialog{
         float bmargin = 6f;
 
         //TODO names
-        buttons.button("$back", Icon.left, style, this::hide).margin(bmargin);
+        //buttons.button("$back", Icon.left, style, this::hide).margin(bmargin);
         //buttons.addImageTextButton("Tech", Icon.tree, style, () -> ui.tech.show()).margin(bmargin);
         //buttons.addImageTextButton("Launch", Icon.upOpen, style, this::hide).margin(bmargin);
         //buttons.addImageTextButton("Database", Icon.book, style, () -> ui.database.show()).margin(bmargin);
@@ -186,16 +174,16 @@ public class PlanetDialog extends FloatingDialog{
         //TODO hacky
         Shaders.planet.camDir.set(cam.direction).rotate(Vec3.Y, planet.getRotation());
 
-        projector.proj(cam.combined());
-        batch.proj(cam.combined());
+        projector.proj(cam.combined);
+        batch.proj(cam.combined);
 
-        bloom.capture();
+        beginBloom();
 
         skybox.render(cam.combined);
 
         renderPlanet(solarSystem);
 
-        bloom.render();
+        endBloom();
 
         Gl.enable(Gl.blend);
 
@@ -229,6 +217,14 @@ public class PlanetDialog extends FloatingDialog{
         cam.update();
     }
 
+    private void beginBloom(){
+        bloom.capture();
+    }
+
+    private void endBloom(){
+        bloom.render();
+    }
+
     private void renderPlanet(Planet planet){
         //render planet at offsetted position in the world
         planet.mesh.render(cam.combined, planet.getTransform(mat));
@@ -239,7 +235,7 @@ public class PlanetDialog extends FloatingDialog{
             renderSectors(planet);
         }
 
-        if(planet.parent != null && planet.hasAtmosphere){
+        if(planet.parent != null && planet.hasAtmosphere && Core.settings.getBool("atmosphere")){
             Blending.additive.apply();
 
             Shaders.atmosphere.camera = cam;
@@ -300,7 +296,7 @@ public class PlanetDialog extends FloatingDialog{
         Shaders.planetGrid.mouse.lerp(tile == null ? Vec3.Zero : tile.sub(planet.position).rotate(Vec3.Y, planet.getRotation()), 0.2f);
 
         shader.bind();
-        shader.setUniformMatrix4("u_proj", cam.combined().val);
+        shader.setUniformMatrix4("u_proj", cam.combined.val);
         shader.setUniformMatrix4("u_trans", planet.getTransform(mat).val);
         shader.apply();
         mesh.render(shader, Gl.lines);

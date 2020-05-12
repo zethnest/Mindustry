@@ -1,10 +1,13 @@
 package mindustry.world.blocks.units;
 
 import arc.*;
+import arc.graphics.*;
 import arc.graphics.g2d.*;
 import arc.math.*;
+import arc.scene.style.*;
 import arc.scene.ui.layout.*;
 import arc.struct.*;
+import arc.util.*;
 import arc.util.io.*;
 import mindustry.*;
 import mindustry.annotations.Annotations.*;
@@ -23,8 +26,8 @@ import mindustry.world.meta.*;
 import static mindustry.Vars.*;
 
 public class UnitFactory extends Block{
-    public float launchVelocity = 0f;
-    public TextureRegion topRegion;
+    public float launchVelocity = 5f;
+    public @Load("@-top") TextureRegion topRegion;
     public int[] capacities;
 
     public UnitPlan[] plans = new UnitPlan[0];
@@ -38,7 +41,20 @@ public class UnitFactory extends Block{
         flags = EnumSet.of(BlockFlag.producer);
         configurable = true;
 
-        config(Integer.class, (tile, i) -> ((UnitFactoryEntity)tile).currentPlan = i < 0 || i >= plans.length ? -1 : i);
+        config(Integer.class, (tile, i) -> {
+            ((UnitFactoryEntity)tile).currentPlan = i < 0 || i >= plans.length ? -1 : i;
+            ((UnitFactoryEntity)tile).progress = 0;
+        });
+
+        consumes.add(new ConsumeItemDynamic(e -> {
+            UnitFactoryEntity entity = (UnitFactoryEntity)e;
+
+            if(entity.currentPlan != -1){
+                return plans[entity.currentPlan].requirements;
+            }
+
+            return ItemStack.empty;
+        }));
     }
 
     @Remote(called = Loc.server)
@@ -52,19 +68,11 @@ public class UnitFactory extends Block{
         super.init();
 
         capacities = new int[Vars.content.items().size];
-        if(consumes.has(ConsumeType.item)){
-            ConsumeItems cons = consumes.get(ConsumeType.item);
-            for(ItemStack stack : cons.items){
-                capacities[stack.item.id] = stack.amount * 2;
+        for(UnitPlan plan : plans){
+            for(ItemStack stack : plan.requirements){
+                capacities[stack.item.id] = Math.max(capacities[stack.item.id], stack.amount * 2);
             }
         }
-    }
-
-    @Override
-    public void load(){
-        super.load();
-
-        topRegion = Core.atlas.find(name + "-top");
     }
 
     @Override
@@ -83,6 +91,7 @@ public class UnitFactory extends Block{
         super.setStats();
 
         stats.remove(BlockStat.itemCapacity);
+
         //TODO
         //stats.add(BlockStat.productionTime, produceTime / 60f, StatUnit.seconds);
     }
@@ -123,9 +132,11 @@ public class UnitFactory extends Block{
             if(!net.client() && currentPlan != -1){
                 UnitPlan plan = plans[currentPlan];
                 Unitc unit = plan.unit.create(team);
-                unit.set(x + Mathf.range(4), y + Mathf.range(4));
+                unit.set(x, y );
                 unit.add();
-                unit.vel().y = launchVelocity;
+                unit.rotation(90);
+                unit.vel().y = launchVelocity + Mathf.range(1f);
+                unit.vel().x = Mathf.range(1f);
                 Events.fire(new UnitCreateEvent(unit));
             }
         }
@@ -134,7 +145,24 @@ public class UnitFactory extends Block{
         public void buildConfiguration(Table table){
             Array<UnitType> units = Array.with(plans).map(u -> u.unit);
 
-            ItemSelection.buildTable(table, units, () -> currentPlan == -1 ? null : plans[currentPlan].unit, unit -> tile.configure(units.indexOf(unit)));
+            ItemSelection.buildTable(table, units, () -> currentPlan == -1 ? null : plans[currentPlan].unit, unit -> configure(units.indexOf(unit)));
+        }
+
+        @Override
+        public void display(Table table){
+            super.display(table);
+
+            TextureRegionDrawable reg = new TextureRegionDrawable();
+
+            table.row();
+            table.table(t -> {
+                t.image().update(i -> {
+                    i.setDrawable(currentPlan == -1 ? Icon.cancel : reg.set(plans[currentPlan].unit.icon(Cicon.medium)));
+                    i.setScaling(Scaling.fit);
+                    i.setColor(currentPlan == -1 ? Color.lightGray : Color.white);
+                }).size(32).padBottom(-4).padRight(2);
+                t.label(() -> currentPlan == -1 ? "$none" : plans[currentPlan].unit.localizedName).color(Color.lightGray);
+            });
         }
 
         @Override
@@ -192,13 +220,15 @@ public class UnitFactory extends Block{
             if(currentPlan != -1){
                 UnitPlan plan = plans[currentPlan];
 
-                if(progress >= plan.time){
+                if(progress >= plan.time/* && !Units.anyEntities(tile, !plan.unit.flying)*/){
                     progress = 0f;
 
                     Call.onUnitFactorySpawn(tile);
                     useContent(plan.unit);
                     consume();
                 }
+
+                progress = Mathf.clamp(progress, 0, plan.time);
             }else{
                 progress = 0f;
             }
@@ -207,6 +237,12 @@ public class UnitFactory extends Block{
         @Override
         public int getMaximumAccepted(Item item){
             return capacities[item.id];
+        }
+
+        @Override
+        public boolean acceptItem(Tilec source, Item item){
+            return currentPlan != -1 && items.get(item) < getMaximumAccepted(item) &&
+                Structs.contains(plans[currentPlan].requirements, stack -> stack.item == item);
         }
 
         @Override

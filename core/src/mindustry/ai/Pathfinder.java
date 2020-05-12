@@ -24,7 +24,7 @@ public class Pathfinder implements Runnable{
 
     /** tile data, see PathTileStruct */
     private int[][] tiles;
-    /** unordered array of path data for iteration only. DO NOT iterate ot access this in the main thread.*/
+    /** unordered array of path data for iteration only. DO NOT iterate ot access this in the main thread. */
     private Array<PathData> list = new Array<>();
     /** Maps teams + flags to a valid path to get to that flag for that team. */
     private PathData[][] pathMap = new PathData[Team.all().length][PathTarget.all.length];
@@ -62,7 +62,7 @@ public class Pathfinder implements Runnable{
 
     /** Packs a tile into its internal representation. */
     private int packTile(Tile tile){
-        return PathTile.get(tile.cost, tile.getTeamID(), (byte)0, !tile.solid() && tile.floor().drownTime <= 0f);
+        return PathTile.get(tile.cost, tile.getTeamID(), !tile.solid() && tile.floor().drownTime <= 0f);
     }
 
     /** Starts or restarts the pathfinding thread. */
@@ -182,7 +182,7 @@ public class Pathfinder implements Runnable{
         return current;
     }
 
-    /** @return whether a tile can be passed through by this team. Pathfinding thread only.*/
+    /** @return whether a tile can be passed through by this team. Pathfinding thread only. */
     private boolean passable(int x, int y, Team team){
         int tile = tiles[x][y];
         return PathTile.passable(tile) || (PathTile.team(tile) != team.id && PathTile.team(tile) != (int)Team.derelict.id);
@@ -229,8 +229,10 @@ public class Pathfinder implements Runnable{
         updateFrontier(createPath(team, target, target.getTargets(team, new IntArray())), -1);
     }
 
-    /** Created a new flowfield that aims to get to a certain target for a certain team.
-     * Pathfinding thread only. */
+    /**
+     * Created a new flowfield that aims to get to a certain target for a certain team.
+     * Pathfinding thread only.
+     */
     private PathData createPath(Team team, PathTarget target, IntArray targets){
         PathData path = new PathData(team, target, world.width(), world.height());
 
@@ -292,7 +294,7 @@ public class Pathfinder implements Runnable{
         }
     }
 
-    /** A path target defines a set of targets for a path.*/
+    /** A path target defines a set of targets for a path. */
     public enum PathTarget{
         enemyCores((team, out) -> {
             for(Tile other : indexer.getEnemy(team, BlockFlag.core)){
@@ -320,7 +322,7 @@ public class Pathfinder implements Runnable{
             this.targeter = targeter;
         }
 
-        /** Get targets. This must run on the main thread.*/
+        /** Get targets. This must run on the main thread. */
         public IntArray getTargets(Team team, IntArray out){
             targeter.get(team, out);
             return out;
@@ -358,11 +360,11 @@ public class Pathfinder implements Runnable{
     @Struct
     class PathTileStruct{
         //traversal cost
-        byte cost;
+        short cost;
         //team of block, if applicable (0 by default)
         byte team;
         //type of target; TODO remove
-        byte type;
+        //byte type;
         //whether it's viable to pass this block
         boolean passable;
     }

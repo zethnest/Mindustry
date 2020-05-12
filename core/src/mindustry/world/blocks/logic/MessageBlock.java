@@ -95,7 +95,7 @@ public class MessageBlock extends Block{
                         text = message;
                         multiline = true;
                         maxLength = maxTextLength;
-                        accepted = tile::configure;
+                        accepted = str -> configure(str);
                     }});
                 }else{
                     FloatingDialog dialog = new FloatingDialog("$editmessage");
@@ -115,7 +115,7 @@ public class MessageBlock extends Block{
                     });
                     a.setMaxLength(maxTextLength);
                     dialog.buttons.button("$ok", () -> {
-                        tile.configure(a.getText());
+                        configure(a.getText());
                         dialog.hide();
                     }).size(130f, 60f);
                     dialog.update(() -> {
@@ -125,7 +125,7 @@ public class MessageBlock extends Block{
                     });
                     dialog.show();
                 }
-                control.input.frag.config.hideConfig();
+                deselect();
             }).size(40f);
         }
 

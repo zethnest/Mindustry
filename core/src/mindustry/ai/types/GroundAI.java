@@ -14,11 +14,12 @@ public class GroundAI extends AIController{
 
     @Override
     public void update(){
+
         if(Units.invalidateTarget(target, unit.team(), unit.x(), unit.y(), Float.MAX_VALUE)){
             target = null;
 
             //TODO this is hacky, cleanup
-            if(unit instanceof Legsc){
+            if(unit instanceof Legsc && unit.moving()){
                 unit.lookAt(((Legsc)unit).baseRotation());
             }
         }
@@ -29,16 +30,16 @@ public class GroundAI extends AIController{
 
         Tilec core = unit.closestEnemyCore();
 
-        if(core == null) return;
+        if(core != null){
+            float dst = unit.dst(core);
 
-        float dst = unit.dst(core);
+            if(dst < unit.range() / 1.1f){
+                target = core;
+            }
 
-        if(dst < unit.range() / 1.1f){
-            target = core;
-        }
-
-        if(dst > unit.range() * 0.5f){
-            moveToCore(PathTarget.enemyCores);
+            if(dst > unit.range() * 0.5f){
+                moveToCore(PathTarget.enemyCores);
+            }
         }
 
         boolean rotate = false, shoot = false;

@@ -14,7 +14,8 @@ import arc.scene.ui.layout.*;
 import arc.util.ArcAnnotate.*;
 import arc.util.*;
 import mindustry.*;
-import mindustry.ai.types.*;
+import mindustry.ai.formations.*;
+import mindustry.ai.formations.patterns.*;
 import mindustry.content.*;
 import mindustry.entities.*;
 import mindustry.entities.units.*;
@@ -131,22 +132,32 @@ public class DesktopInput extends InputHandler{
             drawOverRequest(request);
         }
 
-        //draw things that may be placed soon
-        if(mode == placing && block != null){
-            for(int i = 0; i < lineRequests.size; i++){
-                BuildRequest req = lineRequests.get(i);
-                if(i == lineRequests.size - 1 && req.block.rotate){
-                    drawArrow(block, req.x, req.y, req.rotation);
+        if(player.isBuilder()){
+            //draw things that may be placed soon
+            if(mode == placing && block != null){
+                for(int i = 0; i < lineRequests.size; i++){
+                    BuildRequest req = lineRequests.get(i);
+                    if(i == lineRequests.size - 1 && req.block.rotate){
+                        drawArrow(block, req.x, req.y, req.rotation);
+                    }
+                    drawRequest(lineRequests.get(i));
                 }
-                drawRequest(lineRequests.get(i));
+            }else if(isPlacing()){
+                if(block.rotate){
+                    drawArrow(block, cursorX, cursorY, rotation);
+                }
+                Draw.color();
+                drawRequest(cursorX, cursorY, block, rotation);
+                block.drawPlace(cursorX, cursorY, rotation, validPlace(cursorX, cursorY, block, rotation));
+
+                if(block.saveConfig && block.lastConfig != null){
+                    brequest.set(cursorX, cursorY, rotation, block);
+                    brequest.config = block.lastConfig;
+                    block.drawRequestConfig(brequest, allRequests());
+                    brequest.config = null;
+                }
+
             }
-        }else if(isPlacing()){
-            if(block.rotate){
-                drawArrow(block, cursorX, cursorY, rotation);
-            }
-            Draw.color();
-            drawRequest(cursorX, cursorY, block, rotation);
-            block.drawPlace(cursorX, cursorY, rotation, validPlace(cursorX, cursorY, block, rotation));
         }
 
         Draw.reset();
@@ -161,13 +172,15 @@ public class DesktopInput extends InputHandler{
         }
 
         if((player.dead() || state.isPaused()) && !ui.chatfrag.shown()){
-            //move camera around
-            float camSpeed = !Core.input.keyDown(Binding.dash) ? 3f : 8f;
-            Core.camera.position.add(Tmp.v1.setZero().add(Core.input.axis(Binding.move_x), Core.input.axis(Binding.move_y)).nor().scl(Time.delta() * camSpeed));
+            if(!(scene.getKeyboardFocus() instanceof TextField)){
+                //move camera around
+                float camSpeed = !Core.input.keyDown(Binding.dash) ? 3f : 8f;
+                Core.camera.position.add(Tmp.v1.setZero().add(Core.input.axis(Binding.move_x), Core.input.axis(Binding.move_y)).nor().scl(Time.delta() * camSpeed));
 
-            if(Core.input.keyDown(Binding.mouse_move)){
-                Core.camera.position.x += Mathf.clamp((Core.input.mouseX() - Core.graphics.getWidth() / 2f) * 0.005f, -1, 1) * camSpeed;
-                Core.camera.position.y += Mathf.clamp((Core.input.mouseY() - Core.graphics.getHeight() / 2f) * 0.005f, -1, 1) * camSpeed;
+                if(Core.input.keyDown(Binding.mouse_move)){
+                    Core.camera.position.x += Mathf.clamp((Core.input.mouseX() - Core.graphics.getWidth() / 2f) * 0.005f, -1, 1) * camSpeed;
+                    Core.camera.position.y += Mathf.clamp((Core.input.mouseY() - Core.graphics.getHeight() / 2f) * 0.005f, -1, 1) * camSpeed;
+                }
             }
         }else if(!player.dead()){
             Core.camera.position.lerpDelta(player, 0.08f);
@@ -182,13 +195,28 @@ public class DesktopInput extends InputHandler{
             }
 
             //TODO this is for debugging, remove later
-            if(Core.input.keyTap(KeyCode.q) && !player.dead()){
-                Fx.commandSend.at(player);
-                Units.nearby(player.team(), player.x(), player.y(), 200f, u -> {
-                    if(u.isAI()){
-                        u.controller(new MimicAI(player.unit()));
-                    }
-                });
+            if(Core.input.keyTap(KeyCode.g) && !player.dead() && player.unit() instanceof Commanderc){
+                Commanderc commander = (Commanderc)player.unit();
+
+                if(commander.isCommanding()){
+                    commander.clearCommand();
+                }else{
+
+                    FormationPattern pattern = new SquareFormation();
+                    Formation formation = new Formation(new Vec3(player.x(), player.y(), player.unit().rotation()), pattern);
+                    formation.slotAssignmentStrategy = new DistanceAssignmentStrategy(pattern);
+
+                    units.clear();
+
+                    Fx.commandSend.at(player);
+                    Units.nearby(player.team(), player.x(), player.y(), 200f, u -> {
+                        if(u.isAI()){
+                            units.add(u);
+                        }
+                    });
+
+                    commander.command(formation, units);
+                }
             }
         }
 
@@ -228,7 +256,7 @@ public class DesktopInput extends InputHandler{
             isShooting = false;
         }
 
-        if(isPlacing()){
+        if(isPlacing() && player.isBuilder()){
             cursorType = SystemCursor.hand;
             selectScale = Mathf.lerpDelta(selectScale, 1f, 0.2f);
         }else{
@@ -245,7 +273,7 @@ public class DesktopInput extends InputHandler{
             if(isPlacing() && mode == placing){
                 updateLine(selectX, selectY);
             }else if(!selectRequests.isEmpty()){
-                rotateRequests(selectRequests, (int)Core.input.axisTap(Binding.rotate));
+                rotateRequests(selectRequests, Mathf.sign(Core.input.axisTap(Binding.rotate)));
             }
         }
 
@@ -437,7 +465,7 @@ public class DesktopInput extends InputHandler{
         }else if(Core.input.keyTap(Binding.deselect) && !selectRequests.isEmpty()){
             selectRequests.clear();
             lastSchematic = null;
-        }else if(Core.input.keyTap(Binding.break_block) && !Core.scene.hasMouse()){
+        }else if(Core.input.keyTap(Binding.break_block) && !Core.scene.hasMouse() && player.isBuilder()){
             //is recalculated because setting the mode to breaking removes potential multiblock cursor offset
             deleting = false;
             mode = breaking;
@@ -529,6 +557,7 @@ public class DesktopInput extends InputHandler{
 
     protected void updateMovement(Unitc unit){
         boolean omni = !(unit instanceof WaterMovec);
+        boolean legs = unit.isGrounded();
         float speed = unit.type().speed;
         float xa = Core.input.axis(Binding.move_x);
         float ya = Core.input.axis(Binding.move_y);
@@ -540,14 +569,20 @@ public class DesktopInput extends InputHandler{
         if(aimCursor){
             unit.lookAt(mouseAngle);
         }else{
-            if(!unit.vel().isZero(0.01f)) unit.lookAt(unit.vel().angle());
+            if(!unit.vel().isZero(0.01f)){
+                if(unit.type().flying){
+                    unit.rotation(unit.vel().angle());
+                }else{
+                    unit.lookAt(unit.vel().angle());
+                }
+            }
         }
 
         if(omni){
             unit.moveAt(movement);
         }else{
             unit.moveAt(Tmp.v2.trns(unit.rotation(), movement.len()));
-            if(!movement.isZero()){
+            if(!movement.isZero() && legs){
                 unit.vel().rotateTo(movement.angle(), unit.type().rotateSpeed * Time.delta());
             }
         }

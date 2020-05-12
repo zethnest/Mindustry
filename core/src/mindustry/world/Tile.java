@@ -20,7 +20,7 @@ public class Tile implements Position, QuadTreeObject{
     static final ObjectSet<Tilec> tileSet = new ObjectSet<>();
 
     /** Tile traversal cost. */
-    public byte cost = 1;
+    public short cost = 1;
     /** Tile entity, usually null. */
     public @Nullable Tilec entity;
     public short x, y;
@@ -80,28 +80,27 @@ public class Tile implements Position, QuadTreeObject{
     }
 
     public byte absoluteRelativeTo(int cx, int cy){
-        if(x == cx && y <= cy - 1) return 1;
-        if(x == cx && y >= cy + 1) return 3;
-        if(x <= cx - 1 && y == cy) return 0;
-        if(x >= cx + 1 && y == cy) return 2;
+
+        //very straightforward for odd sizes
+        if(block.size % 2 == 1){
+            if(Math.abs(x - cx) > Math.abs(y - cy)){
+                if(x <= cx - 1) return 0;
+                if(x >= cx + 1) return 2;
+            }else{
+                if(y <= cy - 1) return 1;
+                if(y >= cy + 1) return 3;
+            }
+        }else{ //need offsets here
+            if(Math.abs(x - cx + 0.5f) > Math.abs(y - cy + 0.5f)){
+                if(x+0.5f <= cx - 1) return 0;
+                if(x+0.5f >= cx + 1) return 2;
+            }else{
+                if(y+0.5f <= cy - 1) return 1;
+                if(y+0.5f >= cy + 1) return 3;
+            }
+        }
+
         return -1;
-    }
-
-    public static byte absoluteRelativeTo(int x, int y, int cx, int cy){
-        if(x == cx && y <= cy - 1) return 1;
-        if(x == cx && y >= cy + 1) return 3;
-        if(x <= cx - 1 && y == cy) return 0;
-        if(x >= cx + 1 && y == cy) return 2;
-        return -1;
-    }
-
-    /** Configure a tile with the current, local player. */
-    public void configure(Object value){
-        if(entity != null) Call.onTileConfig(player, entity, value);
-    }
-
-    public void configureAny(Object value){
-        if(entity != null) Call.onTileConfig(null, entity, value);
     }
 
     @SuppressWarnings("unchecked")
@@ -461,31 +460,21 @@ public class Tile implements Position, QuadTreeObject{
             }
         }
 
-        //+24
-
         if(occluded){
             cost += 2;
         }
 
-        //+26
-
         if(block.synthetic() && solid()){
-            cost += Mathf.clamp(block.health / 10f, 0, 20);
+            cost += Mathf.clamp(block.health / 6f, 0, 1000);
         }
-
-        //+46
 
         if(floor.isLiquid){
             cost += 10;
         }
 
-        //+56
-
         if(floor.drownTime > 0){
             cost += 70;
         }
-
-        //+126
 
         if(cost < 0){
             cost = Byte.MAX_VALUE;
@@ -500,12 +489,13 @@ public class Tile implements Position, QuadTreeObject{
 
             //remove this tile's dangling entities
             if(entity.block().isMultiblock()){
+                int cx = entity.tileX(), cy = entity.tileY();
                 int size = entity.block().size;
                 int offsetx = -(size - 1) / 2;
                 int offsety = -(size - 1) / 2;
                 for(int dx = 0; dx < size; dx++){
                     for(int dy = 0; dy < size; dy++){
-                        Tile other = world.tile(x + dx + offsetx, y + dy + offsety);
+                        Tile other = world.tile(cx + dx + offsetx, cy + dy + offsety);
                         if(other != null){
                             //reset entity and block *manually* - thus, preChanged() will not be called anywhere else, for multiblocks
                             if(other != this){ //do not remove own entity so it can be processed in changed()

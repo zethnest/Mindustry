@@ -16,7 +16,6 @@ import mindustry.world.meta.*;
 import static mindustry.Vars.*;
 
 public class Sorter extends Block{
-    private static Item lastItem;
     public boolean invert;
 
     public Sorter(String name){
@@ -27,6 +26,8 @@ public class Sorter extends Block{
         group = BlockGroup.transportation;
         configurable = true;
         unloadable = false;
+        saveConfig = true;
+
         config(Item.class, (tile, item) -> ((SorterEntity)tile).sortItem = item);
         configClear(tile -> ((SorterEntity)tile).sortItem = null);
     }
@@ -50,13 +51,6 @@ public class Sorter extends Block{
         @Nullable Item sortItem;
 
         @Override
-        public void playerPlaced(){
-            if(lastItem != null){
-                tile.configure(lastItem);
-            }
-        }
-
-        @Override
         public void configured(Playerc player, Object value){
             super.configured(player, value);
 
@@ -76,8 +70,6 @@ public class Sorter extends Block{
                 Draw.rect("center", x, y);
                 Draw.color();
             }
-
-
         }
 
         @Override
@@ -100,7 +92,7 @@ public class Sorter extends Block{
         }
 
         Tilec getTileTarget(Item item, Tilec source, boolean flip){
-            int dir = source.absoluteRelativeTo(tile.x, tile.y);
+            int dir = source.relativeTo(tile.x, tile.y);
             if(dir == -1) return null;
             Tilec to;
 
@@ -140,7 +132,18 @@ public class Sorter extends Block{
 
         @Override
         public void buildConfiguration(Table table){
-            ItemSelection.buildTable(table, content.items(), () -> sortItem, item -> tile.configure(lastItem = item));
+            ItemSelection.buildTable(table, content.items(), () -> sortItem, item -> configure(item));
+        }
+
+        @Override
+        public boolean onConfigureTileTapped(Tilec other){
+            if(this == other){
+                deselect();
+                configure(null);
+                return false;
+            }
+
+            return true;
         }
 
         @Override
@@ -165,7 +168,7 @@ public class Sorter extends Block{
             sortItem = content.item(read.s());
 
             if(revision == 1){
-                new DirectionalItemBuffer(20, 45f).read(read);
+                new DirectionalItemBuffer(20).read(read);
             }
         }
     }

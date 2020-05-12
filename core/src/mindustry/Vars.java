@@ -11,6 +11,7 @@ import arc.util.*;
 import arc.util.Log.*;
 import arc.util.io.*;
 import mindustry.ai.*;
+import mindustry.async.*;
 import mindustry.core.*;
 import mindustry.entities.*;
 import mindustry.game.*;
@@ -165,8 +166,10 @@ public class Vars implements Loadable{
     public static LoopControl loops;
     public static Platform platform = new Platform(){};
     public static Mods mods;
-    public static Schematics schematics = new Schematics();
+    public static Schematics schematics;
     public static BeControl becontrol;
+    public static AsyncLogic asyncLogic;
+    public static TeamIndexProcess teamIndex;
 
     public static Universe universe;
     public static World world;
@@ -234,6 +237,7 @@ public class Vars implements Loadable{
         world = new World();
         universe = new Universe();
         becontrol = new BeControl();
+        asyncLogic = new AsyncLogic();
 
         maps = new Maps();
         spawner = new WaveSpawner();

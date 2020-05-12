@@ -115,6 +115,10 @@ public class UnitType extends UnlockableContent{
     //region drawing
 
     public void draw(Unitc unit){
+        if(unit.controller().isBeingControlled(player.unit())){
+            drawControl(unit);
+        }
+
         if(unit.isFlying()){
             Draw.z(Layer.darkness);
             drawShadow(unit);
@@ -137,6 +141,15 @@ public class UnitType extends UnlockableContent{
         if(drawCell) drawCell(unit);
         if(drawItems) drawItems(unit);
         drawLight(unit);
+    }
+
+    public void drawControl(Unitc unit){
+        Draw.z(Layer.groundUnit - 2);
+
+        Draw.color(Pal.accent, Color.white, Mathf.absin(4f, 0.3f));
+        Lines.poly(unit.x(), unit.y(), 4, unit.hitSize() + 1.5f);
+
+        Draw.reset();
     }
 
     public void drawShadow(Unitc unit){
@@ -188,6 +201,15 @@ public class UnitType extends UnlockableContent{
 
     public void drawEngine(Unitc unit){
         if(!unit.isFlying()) return;
+
+        if(unit instanceof Trailc){
+            Trail trail = ((Trailc)unit).trail();
+
+            float cx = unit.x() + Angles.trnsx(unit.rotation() + 180, engineOffset),
+            cy = unit.y() + Angles.trnsy(unit.rotation() + 180, engineOffset);
+            trail.update(cx, cy);
+            trail.draw(unit.team().color, (engineSize + Mathf.absin(Time.time(), 2f, engineSize / 4f) * unit.elevation()));
+        }
 
         Draw.color(unit.team().color);
         Fill.circle(
@@ -255,6 +277,8 @@ public class UnitType extends UnlockableContent{
     }
 
     public void drawLegs(Legsc unit){
+        Draw.reset();
+
         Draw.mixcol(Color.white, unit.hitTime());
 
         float ft = Mathf.sin(unit.walkTime(), 6f, 2f + unit.hitSize() / 15f);

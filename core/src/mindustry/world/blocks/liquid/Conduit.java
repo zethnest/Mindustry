@@ -2,11 +2,13 @@ package mindustry.world.blocks.liquid;
 
 import arc.*;
 import arc.func.*;
+import arc.graphics.*;
 import arc.graphics.g2d.*;
 import arc.math.*;
 import arc.math.geom.*;
 import arc.struct.*;
 import arc.util.*;
+import mindustry.annotations.Annotations.*;
 import mindustry.content.*;
 import mindustry.entities.units.*;
 import mindustry.gen.*;
@@ -16,9 +18,11 @@ import mindustry.world.blocks.*;
 
 public class Conduit extends LiquidBlock implements Autotiler{
     public final int timerFlow = timers++;
+    
+    public Color botColor = Color.valueOf("565656");
 
-    public TextureRegion[] topRegions = new TextureRegion[7];
-    public TextureRegion[] botRegions = new TextureRegion[7];
+    public @Load(value = "@-top-#", length = 7) TextureRegion[] topRegions;
+    public @Load(value = "@-bottom-#", length = 7, fallback = "conduit") TextureRegion[] botRegions;
 
     public float leakResistance = 1.5f;
 
@@ -31,23 +35,12 @@ public class Conduit extends LiquidBlock implements Autotiler{
     }
 
     @Override
-    public void load(){
-        super.load();
-
-        liquidRegion = Core.atlas.find("conduit-liquid");
-        for(int i = 0; i < topRegions.length; i++){
-            topRegions[i] = Core.atlas.find(name + "-top-" + i);
-            botRegions[i] = Core.atlas.find(name + "-bottom-" + i, Core.atlas.find("conduit-bottom-" + i));
-        }
-    }
-
-    @Override
     public void drawRequestRegion(BuildRequest req, Eachable<BuildRequest> list){
         int[] bits = getTiling(req, list);
 
         if(bits == null) return;
 
-        Draw.colorl(0.34f);
+        Draw.color(botColor);
         Draw.alpha(0.5f);
         Draw.rect(botRegions[bits[0]], req.drawx(), req.drawy(),
             botRegions[bits[0]].getWidth() * Draw.scl * req.animScale, botRegions[bits[0]].getHeight() * Draw.scl * req.animScale,
@@ -91,7 +84,7 @@ public class Conduit extends LiquidBlock implements Autotiler{
         public void draw(){
             int rotation = rotation() * 90;
 
-            Draw.colorl(0.34f);
+            Draw.color(botColor);
             Draw.rect(botRegions[blendbits], x, y, rotation);
 
             Draw.color(liquids.current().color);
@@ -113,7 +106,7 @@ public class Conduit extends LiquidBlock implements Autotiler{
         public boolean acceptLiquid(Tilec source, Liquid liquid, float amount){
             noSleep();
             return liquids.get(liquid) + amount < liquidCapacity && (liquids.current() == liquid || liquids.currentAmount() < 0.2f)
-                && ((source.absoluteRelativeTo(tile.x, tile.y) + 2) % 4 != tile.rotation());
+                && ((source.relativeTo(tile.x, tile.y) + 2) % 4 != tile.rotation());
         }
 
         @Override
@@ -121,7 +114,7 @@ public class Conduit extends LiquidBlock implements Autotiler{
             smoothLiquid = Mathf.lerpDelta(smoothLiquid, liquids.currentAmount() / liquidCapacity, 0.05f);
 
             if(liquids.total() > 0.001f && timer(timerFlow, 1)){
-                moveLiquid(tile.getNearbyEntity(rotation()), leakResistance, liquids.current());
+                moveLiquidForward(leakResistance, liquids.current());
                 noSleep();
             }else{
                 sleep();

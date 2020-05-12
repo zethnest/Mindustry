@@ -155,12 +155,12 @@ public class EntityProcess extends BaseProcessor{
                 Log.debug("&gGenerating interface for " + component.name());
 
                 for(TypeName tn : inter.superinterfaces){
-                    Log.debug("&g> &lbextends {0}", simpleName(tn.toString()));
+                    Log.debug("&g> &lbextends @", simpleName(tn.toString()));
                 }
 
                 //log methods generated
                 for(MethodSpec spec : inter.methodSpecs){
-                    Log.debug("&g> > &c{0} {1}({2})", simpleName(spec.returnType.toString()), spec.name, Array.with(spec.parameters).toString(", ", p -> simpleName(p.type.toString()) + " " + p.name));
+                    Log.debug("&g> > &c@ @(@)", simpleName(spec.returnType.toString()), spec.name, Array.with(spec.parameters).toString(", ", p -> simpleName(p.type.toString()) + " " + p.name));
                 }
 
                 Log.debug("");
@@ -172,8 +172,9 @@ public class EntityProcess extends BaseProcessor{
             for(Selement<?> group : allGroups){
                 GroupDef an = group.annotation(GroupDef.class);
                 Array<Stype> types = types(an, GroupDef::value).map(this::interfaceToComp);
-                Array<Stype> collides = types(an, GroupDef::collide);
-                groupDefs.add(new GroupDefinition(group.name(), ClassName.bestGuess(packageName + "." + interfaceName(types.first())), types, an.spatial(), an.mapping(), collides));
+                boolean collides = an.collide();
+                groupDefs.add(new GroupDefinition(group.name().startsWith("g") ? group.name().substring(1) : group.name(),
+                    ClassName.bestGuess(packageName + "." + interfaceName(types.first())), types, an.spatial(), an.mapping(), collides));
             }
 
             ObjectMap<String, Selement> usedNames = new ObjectMap<>();
@@ -242,7 +243,7 @@ public class EntityProcess extends BaseProcessor{
                             fbuilder.initializer(varInitializers.get(f));
                         }
 
-                        if(!isFinal) fbuilder.addModifiers(Modifier.PROTECTED);
+                        fbuilder.addModifiers(f.has(ReadOnly.class) ? Modifier.PROTECTED : Modifier.PUBLIC);
                         fbuilder.addAnnotations(f.annotations().map(AnnotationSpec::get));
                         builder.addField(fbuilder.build());
                         specVariables.put(builder.fieldSpecs.get(builder.fieldSpecs.size() - 1), f);
@@ -293,6 +294,7 @@ public class EntityProcess extends BaseProcessor{
                     //build method using same params/returns
                     MethodSpec.Builder mbuilder = MethodSpec.methodBuilder(first.name()).addModifiers(first.is(Modifier.PRIVATE) ? Modifier.PRIVATE : Modifier.PUBLIC);
                     if(isFinal || entry.value.contains(s -> s.has(Final.class))) mbuilder.addModifiers(Modifier.FINAL);
+                    if(entry.value.contains(s -> s.has(CallSuper.class))) mbuilder.addAnnotation(CallSuper.class); //add callSuper here if necessary
                     if(first.is(Modifier.STATIC)) mbuilder.addModifiers(Modifier.STATIC);
                     mbuilder.addTypeVariables(first.typeVariables().map(TypeVariableName::get));
                     mbuilder.returns(first.retn());
@@ -435,8 +437,8 @@ public class EntityProcess extends BaseProcessor{
             groupUpdate.addStatement("all.update()");
 
             for(GroupDefinition group : groupDefs){
-                for(Stype collide : group.collides){
-                    groupUpdate.addStatement("$L.collide($L)", group.name, collide.name());
+                if(group.collides){
+                    groupUpdate.addStatement("$L.collide()", group.name);
                 }
             }
 
@@ -691,11 +693,10 @@ public class EntityProcess extends BaseProcessor{
         final String name;
         final ClassName baseType;
         final Array<Stype> components;
-        final Array<Stype> collides;
-        final boolean spatial, mapping;
+        final boolean spatial, mapping, collides;
         final ObjectSet<Selement> manualInclusions = new ObjectSet<>();
 
-        public GroupDefinition(String name, ClassName bestType, Array<Stype> components, boolean spatial, boolean mapping, Array<Stype> collides){
+        public GroupDefinition(String name, ClassName bestType, Array<Stype> components, boolean spatial, boolean mapping, boolean collides){
             this.baseType = bestType;
             this.components = components;
             this.name = name;

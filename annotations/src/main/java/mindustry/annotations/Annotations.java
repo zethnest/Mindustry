@@ -58,7 +58,7 @@ public class Annotations{
     @Retention(RetentionPolicy.SOURCE)
     public @interface GroupDef{
         Class[] value();
-        Class[] collide() default {};
+        boolean collide() default false;
         boolean spatial() default false;
         boolean mapping() default false;
     }
@@ -86,6 +86,25 @@ public class Annotations{
 
     //endregion
     //region misc. utility
+
+    /** Automatically loads block regions annotated with this. */
+    @Target(ElementType.FIELD)
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface Load{
+        /**
+         * The region name to load. Variables can be used:
+         * "@" -> block name
+         * "$size" -> block size
+         * "#" "#1" "#2" -> index number, for arrays
+         * */
+        String value();
+        /** 1D Array length, if applicable.  */
+        int length() default 1;
+        /** 2D array lengths. */
+        int[] lengths() default {};
+        /** Fallback string used to replace "@" (the block name) if the region isn't found. */
+        String fallback() default "error";
+    }
 
     @Target(ElementType.TYPE)
     @Retention(RetentionPolicy.SOURCE)

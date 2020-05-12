@@ -77,7 +77,7 @@ public class Blocks implements ContentList{
     duo, scatter, scorch, hail, arc, wave, lancer, swarmer, salvo, fuse, ripple, cyclone, spectre, meltdown,
 
     //units
-    groundFactory, repairPoint,
+    groundFactory, airFactory, navalFactory, repairPoint,
 
     //misc experimental
 
@@ -512,12 +512,12 @@ public class Blocks implements ContentList{
             consumes.power(3f);
             consumes.item(Items.titanium, 2);
 
-            int topRegion = reg("-top");
+            int topRegion = re("-top");
 
             drawer = entity -> {
                 Draw.rect(region, entity.x(), entity.y());
                 Draw.alpha(Mathf.absin(entity.totalProgress, 3f, 0.9f) * entity.warmup);
-                Draw.rect(reg(topRegion), entity.x(), entity.y());
+                Draw.rect(re(topRegion), entity.x(), entity.y());
                 Draw.reset();
             };
         }};
@@ -534,13 +534,13 @@ public class Blocks implements ContentList{
             consumes.power(5f);
             itemCapacity = 20;
 
-            int bottomRegion = reg("-bottom"), weaveRegion = reg("-weave");
+            int bottomRegion = re("-bottom"), weaveRegion = re("-weave");
 
             drawIcons = () -> new TextureRegion[]{Core.atlas.find(name + "-bottom"), Core.atlas.find(name), Core.atlas.find(name + "-weave")};
 
             drawer = entity -> {
-                Draw.rect(reg(bottomRegion), entity.x(), entity.y());
-                Draw.rect(reg(weaveRegion), entity.x(), entity.y(), entity.totalProgress);
+                Draw.rect(re(bottomRegion), entity.x(), entity.y());
+                Draw.rect(re(weaveRegion), entity.x(), entity.y(), entity.totalProgress);
 
                 Draw.color(Pal.accent);
                 Draw.alpha(entity.warmup);
@@ -585,23 +585,23 @@ public class Blocks implements ContentList{
             consumes.item(Items.titanium);
             consumes.liquid(Liquids.water, 0.2f);
 
-            int liquidRegion = reg("-liquid"), topRegion = reg("-top"), bottomRegion = reg("-bottom");
+            int liquidRegion = re("-liquid"), topRegion = re("-top"), bottomRegion = re("-bottom");
 
             drawIcons = () -> new TextureRegion[]{Core.atlas.find(name + "-bottom"), Core.atlas.find(name + "-top")};
 
             drawer = entity -> {
                 int rotation = rotate ? entity.rotation() * 90 : 0;
 
-                Draw.rect(reg(bottomRegion), entity.x(), entity.y(), rotation);
+                Draw.rect(re(bottomRegion), entity.x(), entity.y(), rotation);
 
                 if(entity.liquids().total() > 0.001f){
                     Draw.color(outputLiquid.liquid.color);
                     Draw.alpha(entity.liquids().get(outputLiquid.liquid) / liquidCapacity);
-                    Draw.rect(reg(liquidRegion), entity.x(), entity.y(), rotation);
+                    Draw.rect(re(liquidRegion), entity.x(), entity.y(), rotation);
                     Draw.color();
                 }
 
-                Draw.rect(reg(topRegion), entity.x(), entity.y(), rotation);
+                Draw.rect(re(topRegion), entity.x(), entity.y(), rotation);
             };
         }};
 
@@ -672,20 +672,20 @@ public class Blocks implements ContentList{
 
             int[] frameRegions = new int[3];
             for(int i = 0; i < 3; i++){
-                frameRegions[i] = reg("-frame" + i);
+                frameRegions[i] = re("-frame" + i);
             }
 
-            int liquidRegion = reg("-liquid");
-            int topRegion = reg("-top");
+            int liquidRegion = re("-liquid");
+            int topRegion = re("-top");
 
             drawIcons = () -> new TextureRegion[]{Core.atlas.find(name), Core.atlas.find(name + "-top")};
             drawer = entity -> {
                 Draw.rect(region, entity.x(), entity.y());
-                Draw.rect(reg(frameRegions[(int)Mathf.absin(entity.totalProgress, 5f, 2.999f)]), entity.x(), entity.y());
+                Draw.rect(re(frameRegions[(int)Mathf.absin(entity.totalProgress, 5f, 2.999f)]), entity.x(), entity.y());
                 Draw.color(Color.clear, entity.liquids().current().color, entity.liquids().total() / liquidCapacity);
-                Draw.rect(reg(liquidRegion), entity.x(), entity.y());
+                Draw.rect(re(liquidRegion), entity.x(), entity.y());
                 Draw.color();
-                Draw.rect(reg(topRegion), entity.x(), entity.y());
+                Draw.rect(re(topRegion), entity.x(), entity.y());
             };
         }};
 
@@ -700,13 +700,13 @@ public class Blocks implements ContentList{
             consumes.item(Items.scrap, 1);
             consumes.power(0.50f);
 
-            int rotatorRegion = reg("-rotator");
+            int rotatorRegion = re("-rotator");
 
             drawIcons = () -> new TextureRegion[]{Core.atlas.find(name), Core.atlas.find(name + "-rotator")};
 
             drawer = entity -> {
                 Draw.rect(region, entity.x(), entity.y());
-                Draw.rect(reg(rotatorRegion), entity.x(), entity.y(), entity.totalProgress * 2f);
+                Draw.rect(re(rotatorRegion), entity.x(), entity.y(), entity.totalProgress * 2f);
             };
         }};
 
@@ -907,13 +907,13 @@ public class Blocks implements ContentList{
             requirements(Category.distribution, ItemStack.with(Items.copper, 1, Items.lead, 1, Items.titanium, 1));
             health = 65;
             speed = 0.08f;
-            displayedSpeed = 10f;
+            displayedSpeed = 11f;
         }};
 
         plastaniumConveyor = new StackConveyor("plastanium-conveyor"){{
             requirements(Category.distribution, ItemStack.with(Items.plastanium, 1, Items.silicon, 1, Items.graphite, 1));
             health = 75;
-            speed = 0.04f;
+            speed = 2.5f / 60f;
             recharge = 2f;
         }};
 
@@ -1669,15 +1669,35 @@ public class Blocks implements ContentList{
         //region units
 
         //for testing only.
+
         groundFactory = new UnitFactory("ground-factory"){{
             requirements(Category.units, ItemStack.with(Items.copper, 30, Items.lead, 70));
             plans = new UnitPlan[]{
-                new UnitPlan(UnitTypes.dagger, 60f, ItemStack.with(Items.silicon, 10)),
-                new UnitPlan(UnitTypes.wraith, 60f, ItemStack.with(Items.silicon, 10)),
+                new UnitPlan(UnitTypes.dagger, 500f, ItemStack.with(Items.silicon, 10)),
+                new UnitPlan(UnitTypes.titan, 800f, ItemStack.with(Items.silicon, 20, Items.titanium, 10)),
             };
             size = 3;
             consumes.power(1.2f);
-            consumes.items(new ItemStack(Items.silicon, 10));
+        }};
+
+        airFactory = new UnitFactory("air-factory"){{
+            requirements(Category.units, ItemStack.with(Items.copper, 30, Items.lead, 70));
+            plans = new UnitPlan[]{
+                new UnitPlan(UnitTypes.wraith, 200f, ItemStack.with(Items.silicon, 10)),
+                //new UnitPlan(UnitTypes.ghoul, 200f, ItemStack.with(Items.silicon, 10)),
+            };
+            size = 3;
+            consumes.power(1.2f);
+        }};
+
+        navalFactory = new UnitFactory("naval-factory"){{
+            requirements(Category.units, ItemStack.with(Items.copper, 30, Items.lead, 70));
+            plans = new UnitPlan[]{
+                new UnitPlan(UnitTypes.vanguard, 200f, ItemStack.with(Items.silicon, 10)),
+            };
+            size = 3;
+            requiresWater = true;
+            consumes.power(1.2f);
         }};
 
         repairPoint = new RepairPoint("repair-point"){{
