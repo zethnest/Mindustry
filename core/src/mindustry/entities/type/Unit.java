@@ -432,13 +432,13 @@ public abstract class Unit extends DestructibleEntity implements SaveTrait, Targ
     }
 
     public void drawAll(){
-        if(!isDead()){
-            draw();
-            drawStats();
-        }
+        if(isDead() || !Core.settings.getBool("drawunits")) return;
+        draw();
+        drawStats();
     }
 
     public void drawShadow(float offsetX, float offsetY){
+        if(!Core.settings.getBool("drawunits")) return;
         Draw.rect(getIconRegion(), x + offsetX, y + offsetY, rotation - 90);
     }
 

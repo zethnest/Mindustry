@@ -446,6 +446,10 @@ public class DesktopInput extends InputHandler{
                 Core.settings.put("lasersopacity", 0);
             }
         }
+
+        if(Core.input.keyTap(Binding.toggle_draw_units)){
+            Core.settings.put("drawunits", !Core.settings.getBool("drawunits"));
+        }
     }
 
     @Override
