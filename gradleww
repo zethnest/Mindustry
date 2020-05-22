@@ -1,0 +1,39 @@
+#!/usr/bin/sh
+
+BaseDir=$(pwd)
+ArcDirectory="../Arc"
+useArcHash=$(grep "archash" gradle.properties| cut -d= -f2)
+
+if [ -d "$ArcDirectory" ]; then
+    cd "$ArcDirectory" || exit 1
+    [ ! -d ".git" ] && exit 1
+
+    if [ "$(git cat-file -t "$useArcHash")" = "commit" ]; then
+        git checkout master
+        git checkout "$useArcHash"
+    else
+        git checkout master
+        git pull --rebase upstream master
+    fi
+fi
+
+cd "$BaseDir" || exit 1
+
+if [ -f "local.properties" ]; then
+    export ANDROID_HOME="/opt/android-sdk"
+else
+    unset ANDROID_HOME
+fi
+
+if ! grep "buildversion" gradle.properties; then
+    echo "versionModifier=release" >> gradle.properties
+    echo "buildversion=122" >> gradle.properties
+    trap "git restore gradle.properties" 0 HUP INT TRAP TERM
+fi
+
+if ! command -v gradle >/dev/null 2>&1; then
+    gradle --daemon "$@"
+else
+    ./gradlew "$@"
+fi
+git restore gradle.properties
