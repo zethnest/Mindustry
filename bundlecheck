@@ -1,0 +1,34 @@
+#!/usr/bin/sh
+
+bundleDir="$(pwd)/core/assets/bundles"
+
+bundleEn=$(mktemp)
+trap 'rm -f $bundleEn' 0 HUP INT TRAP TERM
+
+cut -d= -f1 < "$bundleDir"/bundle.properties > "$bundleEn"
+
+showDiff(){
+    bundleTmp=$(mktemp)
+    trap 'rm -f $bundleTmp' 0 HUP INT TRAP TERM
+    cut -d= -f1 < "$1" | sed 's/^\s\+\(.*\)\s\+/\1/g' > "$bundleTmp"
+
+    echo "$1"
+    printf "%s\n%s" "$1" "$(diff -u "$bundleTmp" "$bundleEn")" | colordiff | less -R
+}
+
+if [ -n "$1" ]; then
+    if [ ! -f "$bundleDir/bundle_$1.properties" ]; then
+        echo "No \"bundle_$1.properties\" found"
+        exit
+    fi
+
+    showDiff "$bundleDir/bundle_$1.properties"
+
+    exit
+fi
+
+for bundle in "$bundleDir"/*; do
+    [ "$bundle" = "bundle.properties" ] && continue
+
+    showDiff "$bundle"
+done
