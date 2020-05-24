@@ -13,7 +13,11 @@ showDiff(){
     cut -d= -f1 < "$1" | sed 's/^\s\+\(.*\)\s\+/\1/g' > "$bundleTmp"
 
     echo "$1"
-    printf "%s\n%s" "$1" "$(diff -u "$bundleTmp" "$bundleEn")" | colordiff | less -R
+    if command -v colordiff; then
+        printf "%s\n%s" "$1" "$(diff -u "$bundleTmp" "$bundleEn")" | colordiff | less -R
+    else
+        printf "%s\n%s" "$1" "$(diff -u "$bundleTmp" "$bundleEn")" | less
+    fi
 }
 
 if [ -n "$1" ]; then
