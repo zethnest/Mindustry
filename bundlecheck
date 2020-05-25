@@ -1,38 +1,46 @@
 #!/usr/bin/sh
+# Red means something that is missing from bundle.properties
+# Green means something that is extra to bundle.properties
 
 bundleDir="$(pwd)/core/assets/bundles"
 
 bundleEn=$(mktemp)
 trap 'rm -f $bundleEn' 0 HUP INT TRAP TERM
 
-cut -d= -f1 < "$bundleDir"/bundle.properties > "$bundleEn"
+cut -d= -f1 < "$bundleDir"/bundle.properties | sed 's/[[:space:]]*$//g' > "$bundleEn"
 
 showDiff(){
     bundleTmp=$(mktemp)
     trap 'rm -f $bundleTmp' 0 HUP INT TRAP TERM
-    cut -d= -f1 < "$1" | sed 's/^\s\+\(.*\)\s\+/\1/g' > "$bundleTmp"
+    cut -d= -f1 < "$1" | sed 's/[[:space:]]*$//g' > "$bundleTmp"
 
-    echo "$1"
-    if command -v colordiff; then
-        printf "%s\n%s" "$1" "$(diff -u "$bundleTmp" "$bundleEn")" | colordiff | less -R
+    evalCommand1="printf \"%s\n%s\" \"$1\" \"\$(diff -u \"\$bundleEn\" \"\$bundleTmp\")\" "
+    evalCommand2=' | less -K'
+    if command -v colordiff >/dev/null 2>&1; then
+        eval "$evalCommand1 | colordiff $evalCommand2 -R"
     else
-        printf "%s\n%s" "$1" "$(diff -u "$bundleTmp" "$bundleEn")" | less
+        eval "$evalCommand1 $evalCommand2"
     fi
+
+    [ -f "$bundleTmp" ] && rm "$bundleTmp"
 }
 
 if [ -n "$1" ]; then
-    if [ ! -f "$bundleDir/bundle_$1.properties" ]; then
-        echo "No \"bundle_$1.properties\" found"
+    [ ! -f "$bundleDir/bundle_$1.properties" ] && \
+        echo "No \"bundle_$1.properties\" found" && \
         exit
-    fi
 
-    showDiff "$bundleDir/bundle_$1.properties"
-
-    exit
+    showDiff "$bundleDir/bundle_$1.properties" && exit
+else
+    sttyConfig=$(stty -g)
+    trap 'stty $sttyConfig' 0 HUP INT TRAP TERM
+    for bundle in "$bundleDir"/*; do
+        echo "Press any key to view $(basename $bundle) diff"
+        stty raw -echo; answer=$(head -c 1); stty "$sttyConfig"
+        [ "$answer" = "" ] && exit
+        [ "$bundle" = "bundle.properties" ] && continue
+        showDiff "$bundle"
+    done
 fi
 
-for bundle in "$bundleDir"/*; do
-    [ "$bundle" = "bundle.properties" ] && continue
-
-    showDiff "$bundle"
-done
+[ -f "$bundleEn" ] && rm "$bundleEn"
