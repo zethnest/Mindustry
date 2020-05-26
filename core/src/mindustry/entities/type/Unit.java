@@ -13,6 +13,7 @@ import mindustry.content.*;
 import mindustry.entities.*;
 import mindustry.entities.effect.*;
 import mindustry.entities.traits.*;
+import mindustry.entities.type.base.MinerDrone;
 import mindustry.entities.units.*;
 import mindustry.game.EventType.*;
 import mindustry.game.*;
@@ -382,6 +383,7 @@ public abstract class Unit extends DestructibleEntity implements SaveTrait, Targ
     }
 
     public void drawStats(){
+        if((Unit)this instanceof MinerDrone) return;
         Draw.color(Color.black, team.color, healthf() + Mathf.absin(Time.time(), Math.max(healthf() * 5f, 1f), 1f - healthf()));
         Draw.rect(getPowerCellRegion(), x, y, rotation - 90);
         Draw.color();
@@ -396,6 +398,7 @@ public abstract class Unit extends DestructibleEntity implements SaveTrait, Targ
     }
 
     public void drawBackItems(float itemtime, boolean number){
+        if((Unit)this instanceof MinerDrone) return;
         //draw back items
         if(itemtime > 0.01f && item.item != null){
             float backTrns = 5f;
@@ -438,6 +441,7 @@ public abstract class Unit extends DestructibleEntity implements SaveTrait, Targ
     }
 
     public void drawShadow(float offsetX, float offsetY){
+        if((Unit)this instanceof MinerDrone) return;
         if(!Core.settings.getBool("drawunits")) return;
         Draw.rect(getIconRegion(), x + offsetX, y + offsetY, rotation - 90);
     }

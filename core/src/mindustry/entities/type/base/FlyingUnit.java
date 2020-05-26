@@ -137,11 +137,13 @@ public class FlyingUnit extends BaseUnit{
 
     @Override
     public void drawUnder(){
+        if((Unit)this instanceof MinerDrone) return;
         drawEngine();
     }
 
     @Override
     public void draw(){
+        if((Unit)this instanceof MinerDrone) return;
         Draw.mixcol(Color.white, hitTime / hitDuration);
         Draw.rect(type.region, x, y, rotation - 90);
 

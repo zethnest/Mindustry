@@ -18,6 +18,7 @@ import mindustry.entities.effect.*;
 import mindustry.entities.effect.GroundEffectEntity.*;
 import mindustry.entities.traits.*;
 import mindustry.entities.type.*;
+import mindustry.entities.type.base.MinerDrone;
 import mindustry.game.EventType.*;
 import mindustry.graphics.*;
 import mindustry.input.*;
@@ -352,7 +353,7 @@ public class Renderer implements ApplicationListener{
             Draw.rect("circle-shadow", u.x, u.y, size * rad, size * rad);
         };
 
-        unitGroup.draw(unit -> !unit.isDead(), draw::get);
+        unitGroup.draw(unit -> !unit.isDead() && !(unit instanceof MinerDrone), draw::get);
 
         if(!playerGroup.isEmpty()){
             playerGroup.draw(unit -> !unit.isDead(), draw::get);

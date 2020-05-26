@@ -91,6 +91,7 @@ public interface MinerTrait extends Entity{
 
     default void drawMining(){
         Unit unit = (Unit)this;
+        if(!(unit instanceof Player)) return;
         Tile tile = getMineTile();
 
         if(tile == null) return;
