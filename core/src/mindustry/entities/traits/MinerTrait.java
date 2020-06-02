@@ -9,6 +9,7 @@ import mindustry.content.*;
 import mindustry.entities.Effects;
 import mindustry.entities.effect.*;
 import mindustry.entities.type.*;
+import mindustry.entities.type.base.*;
 import mindustry.gen.Call;
 import mindustry.graphics.*;
 import mindustry.type.Item;
@@ -72,7 +73,7 @@ public interface MinerTrait extends Entity{
                     Call.transferItemTo(item, 1,
                             tile.worldx() + Mathf.range(tilesize / 2f),
                             tile.worldy() + Mathf.range(tilesize / 2f), core.tile);
-                }else if(unit.acceptsItem(item)){
+                }else if(unit.acceptsItem(item) && !(unit instanceof MinerDrone)){
                     //this is clientside, since items are synced anyway
                     ItemTransfer.transferItemToUnit(item,
                             tile.worldx() + Mathf.range(tilesize / 2f),
@@ -81,7 +82,7 @@ public interface MinerTrait extends Entity{
                 }
             }
 
-            if(Mathf.chance(0.06 * Time.delta())){
+            if(Mathf.chance(0.06 * Time.delta()) && !(unit instanceof MinerDrone)){
                 Effects.effect(Fx.pulverizeSmall,
                         tile.worldx() + Mathf.range(tilesize / 2f),
                         tile.worldy() + Mathf.range(tilesize / 2f), 0f, item.color);
