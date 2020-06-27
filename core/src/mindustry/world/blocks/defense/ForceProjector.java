@@ -81,7 +81,7 @@ public class ForceProjector extends Block{
     public void drawPlace(int x, int y, int rotation, boolean valid){
         super.drawPlace(x, y, rotation, valid);
 
-        Draw.color(tile.team().color, Color.white, Mathf.clamp(hit));
+        Draw.color(paramTile.getTeam().color);
         Lines.stroke(1f);
         Lines.poly(x * tilesize, y * tilesize, 6, radius);
         Draw.color();
@@ -215,7 +215,7 @@ public class ForceProjector extends Block{
 
         @Override
         public void draw(){
-            Draw.color(tile.team().color, Color.white, Mathf.clamp(hit));
+            Draw.color(paramTile.getTeam().color);
             Fill.poly(x, y, 6, realRadius(entity));
             Draw.color();
         }
@@ -234,7 +234,7 @@ public class ForceProjector extends Block{
 
             float rad = realRadius(entity);
 
-            Draw.color(tile.team().color, Color.white, Mathf.clamp(hit));
+            Draw.color(paramTile.getTeam().color);
             Lines.stroke(1.5f);
             Draw.alpha(0.09f + 0.08f * entity.hit);
             Fill.poly(x, y, 6, rad);
