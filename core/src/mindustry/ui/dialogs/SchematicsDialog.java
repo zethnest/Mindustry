@@ -344,40 +344,42 @@ public class SchematicsDialog extends FloatingDialog{
             cont.clear();
             title.setText("[[" + Core.bundle.get("schematic") + "] " +schem.name());
 
-            cont.add(Core.bundle.format("schematic.info", schem.width, schem.height, schem.tiles.size)).color(Color.lightGray);
-            cont.row();
-            cont.add(new SchematicImage(schem)).maxSize(800f);
-            cont.row();
+            cont.pane(p -> {
+                p.add(Core.bundle.format("schematic.info", schem.width, schem.height, schem.tiles.size)).color(Color.lightGray);
+                p.row();
+                p.add(new SchematicImage(schem)).maxSize(800f);
+                p.row();
 
-            IntIntMap blocks = new IntIntMap();
-            schem.tiles.each(t -> blocks.inc(t.block.id));
-            cont.table(t -> {
-                int i = 0;
-                for(Entry ent : blocks){
-                    int v = ent.value;
-                    t.addImage(Vars.content.block(ent.key).icon(Cicon.small)).size(Cicon.small.size).left();
-                    t.add("[lightgray]" + v).left().padLeft(4).padRight(6).padTop(4).padBottom(4);
+                IntIntMap blocks = new IntIntMap();
+                schem.tiles.each(t -> blocks.inc(t.block.id));
+                p.table(t -> {
+                    int i = 0;
+                    for(Entry ent : blocks){
+                        int v = ent.value;
+                        t.addImage(Vars.content.block(ent.key).icon(Cicon.small)).size(Cicon.small.size).left();
+                        t.add("[lightgray]" + v).left().padLeft(4).padRight(6).padTop(4).padBottom(4);
 
-                    if(++i % 6 == 0){
-                        t.row();
+                        if(++i % 6 == 0){
+                            t.row();
+                        }
                     }
-                }
 
-            });
-            cont.row();
+                });
+                p.row();
 
-            Array<ItemStack> arr = schem.requirements();
-            cont.table(r -> {
-                int i = 0;
-                for(ItemStack s : arr){
-                    r.addImage(s.item.icon(Cicon.small)).left();
-                    r.add(s.amount + "").padLeft(2).left().color(Color.lightGray).padRight(4);
+                Array<ItemStack> arr = schem.requirements();
+                p.table(r -> {
+                    int i = 0;
+                    for(ItemStack s : arr){
+                        r.addImage(s.item.icon(Cicon.small)).left();
+                        r.add(s.amount + "").padLeft(2).left().color(Color.lightGray).padRight(4);
 
-                    if(++i % 4 == 0){
-                        r.row();
+                        if(++i % 4 == 0){
+                            r.row();
+                        }
                     }
-                }
-            });
+                });
+            }).get().setScrollingDisabled(true,false);
 
             show();
         }
