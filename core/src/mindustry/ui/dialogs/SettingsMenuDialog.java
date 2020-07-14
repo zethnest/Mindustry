@@ -18,6 +18,7 @@ import mindustry.core.*;
 import mindustry.game.EventType.*;
 import mindustry.gen.*;
 import mindustry.graphics.*;
+import mindustry.type.*;
 import mindustry.input.*;
 import mindustry.ui.*;
 
@@ -28,6 +29,7 @@ public class SettingsMenuDialog extends SettingsDialog{
     private SettingsTable graphics;
     private SettingsTable game;
     private SettingsTable sound;
+    private SettingsTable drawable;
 
     private Table prefs;
     private Table menu;
@@ -66,6 +68,7 @@ public class SettingsMenuDialog extends SettingsDialog{
 
         game = new SettingsTable();
         graphics = new SettingsTable();
+        drawable = new SettingsTable();
         sound = new SettingsTable();
 
         prefs = new Table();
@@ -190,6 +193,8 @@ public class SettingsMenuDialog extends SettingsDialog{
         menu.addButton("$settings.graphics", style, () -> visible(1));
         menu.row();
         menu.addButton("$settings.sound", style, () -> visible(2));
+        menu.row();
+        menu.addButton("$settings.drawable", style, () -> visible(3));
         menu.row();
         menu.addButton("$settings.language", style, ui.language::show);
         if(!mobile || Core.settings.getBool("keyboard")){
@@ -364,6 +369,10 @@ public class SettingsMenuDialog extends SettingsDialog{
         if(!mobile){
             Core.settings.put("swapdiagonal", false);
         }
+
+        for(String name : UnitType.unitName){
+            drawable.checkPref(name, true);
+        }
     }
 
     private void back(){
@@ -374,7 +383,7 @@ public class SettingsMenuDialog extends SettingsDialog{
 
     private void visible(int index){
         prefs.clearChildren();
-        prefs.add(new Table[]{game, graphics, sound}[index]);
+        prefs.add(new Table[]{game, graphics, sound, drawable}[index]);
     }
 
     @Override

@@ -307,6 +307,10 @@ public abstract class BaseUnit extends Unit implements ShooterTrait{
         }
     }
 
+    public boolean toDraw(){
+        return Core.settings.getBool(type.name);
+    }
+
     @Override
     public void draw(){
 

@@ -16,6 +16,7 @@ import mindustry.gen.*;
 import mindustry.ui.*;
 
 public class UnitType extends UnlockableContent{
+    public static Array<String> unitName = new Array<String>();
     public @NonNull TypeID typeID;
     public @NonNull Prov<? extends BaseUnit> constructor;
 
@@ -46,6 +47,7 @@ public class UnitType extends UnlockableContent{
 
     public <T extends BaseUnit> UnitType(String name, Prov<T> mainConstructor){
         this(name);
+        unitName.add(name);
         create(mainConstructor);
     }
 
