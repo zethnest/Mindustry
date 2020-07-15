@@ -1,7 +1,9 @@
 package mindustry.world.blocks.distribution;
 
-import arc.math.Mathf;
-import arc.util.Time;
+import arc.math.*;
+import arc.math.geom.*;
+import arc.graphics.g2d.*;
+import arc.util.*;
 import mindustry.entities.type.*;
 import mindustry.type.Item;
 import mindustry.world.*;
@@ -9,7 +11,7 @@ import mindustry.world.meta.BlockGroup;
 
 import java.io.*;
 
-import static mindustry.Vars.world;
+import static mindustry.Vars.*;
 
 public class OverflowGate extends Block{
     public float speed = 1f;
@@ -87,6 +89,24 @@ public class OverflowGate extends Block{
         entity.lastInput = source;
 
         update(tile);
+    }
+
+    @Override
+    public void draw(Tile tile){
+        super.draw(tile);
+
+        OverflowGateEntity entity = tile.ent();
+
+        if(entity.items.total() <= 0) return;
+        if(entity.lastInput == null) return;
+        if(entity.time < 1f) return;
+
+        int from = tile.relativeTo(entity.lastInput.x, entity.lastInput.y);
+        if(from == -1) return;
+        Tile to = tile.getNearby((from + 2) % 4);
+        if(to == null) return;
+
+        Draw.rect("bridge-arrow", tile.x * tilesize, tile.y * tilesize, tile.absoluteRelativeTo(to.x, to.y) * 90);
     }
 
     public Tile getTileTarget(Tile tile, Item item, Tile src, boolean flip){
